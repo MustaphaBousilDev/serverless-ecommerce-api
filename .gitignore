@@ -1,0 +1,60 @@
+# ============================================
+# Node.js / TypeScript / Serverless + AWS CFN
+# ============================================
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Build and dist folders
+dist/
+build/
+.tmp/
+.temp/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment files (never commit secrets)
+.env
+.env.*
+!.env.example  # you can commit a template file
+
+# AWS credentials or config
+.aws/
+.aws-sam/
+*.aws.json
+
+# Serverless Framework
+.serverless/
+.serverless_plugins/
+.serverless-nextjs/
+.serverless-offline/
+
+# CloudFormation
+*.template
+*.stack.json
+*.cfn.json
+*.cfn.yml
+.cfn/
+
+# Logs
+*.log
+logs/
+debug.log
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local testing tools (like DynamoDB Local)
+.dynamodb/
+.localstack/
+docker-compose.override.yml

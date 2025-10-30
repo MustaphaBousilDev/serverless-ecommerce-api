@@ -1,40 +1,43 @@
 {
   "name": "serverless-ecommerce-api",
   "version": "1.0.0",
-  "description": "A production-ready, highly scalable serverless REST API for managing e-commerce orders. Perfect for AWS Certified Developer exam preparation as it covers all major AWS services you'll encounter.",
-  "main": "index.js",
+  "description": "Production-ready serverless e-commerce API with Clean Architecture",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "sam:build": "sam build",
+    "sam:deploy": "sam deploy --guided",
+    "sam:local": "sam local start-api"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MustaphaBousilDev/serverless-ecommerce-api.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/MustaphaBousilDev/serverless-ecommerce-api/issues"
-  },
-  "homepage": "https://github.com/MustaphaBousilDev/serverless-ecommerce-api#readme",
+  "keywords": ["serverless", "aws", "lambda", "clean-architecture"],
+  "author": "Your Name",
+  "license": "MIT",
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.157",
-    "@types/node": "^24.9.2",
-    "@typescript-eslint/eslint-plugin": "^8.46.2",
-    "@typescript-eslint/parser": "^8.46.2",
-    "esbuild": "^0.25.11",
-    "eslint": "^9.38.0",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.6.2",
-    "typescript": "^5.9.3"
+    "@types/aws-lambda": "^8.10.131",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.5",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.4",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.919.0",
-    "@aws-sdk/client-eventbridge": "^3.919.0",
-    "@aws-sdk/client-s3": "^3.919.0",
-    "@aws-sdk/client-sqs": "^3.919.0",
-    "@aws-sdk/lib-dynamodb": "^3.919.0",
-    "@aws-sdk/s3-request-presigner": "^3.919.0",
-    "uuid": "^13.0.0"
+    "@aws-sdk/client-dynamodb": "^3.490.0",
+    "@aws-sdk/client-eventbridge": "^3.490.0",
+    "@aws-sdk/client-s3": "^3.490.0",
+    "@aws-sdk/client-sqs": "^3.490.0",
+    "@aws-sdk/lib-dynamodb": "^3.490.0",
+    "uuid": "^9.0.1"
   }
 }
