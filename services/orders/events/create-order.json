@@ -1,0 +1,14 @@
+{
+  "httpMethod": "POST",
+  "path": "/orders",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"userId\":\"user-123\",\"items\":[{\"productId\":\"prod-001\",\"productName\":\"Laptop\",\"quantity\":1,\"unitPrice\":999.99}],\"shippingAddress\":{\"street\":\"123 Main St\",\"city\":\"New York\",\"state\":\"NY\",\"country\":\"USA\",\"zipCode\":\"10001\"}}",
+  "isBase64Encoded": false,
+  "requestContext": {
+    "requestId": "test-123",
+    "accountId": "123456789012",
+    "stage": "dev"
+  }
+}
