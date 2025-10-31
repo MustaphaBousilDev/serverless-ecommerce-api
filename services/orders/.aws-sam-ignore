@@ -1,0 +1,9 @@
+**Add:**
+```
+.git
+.gitignore
+src/
+tests/
+*.ts
+tsconfig.json
+README.md

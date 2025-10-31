@@ -3,17 +3,89 @@
   "version": "1.0.0",
   "description": "Serverless Orders Microservice",
   "main": "dist/index.js",
+ 
   "scripts": {
+    "// === BUILD COMMANDS ===": "",
     "build": "tsc",
-    "watch": "tsc -w",
-    "clean": "rm -rf dist",
+    "build:watch": "tsc -w",
+    "clean": "rm -rf dist .aws-sam",
     "prebuild": "npm run clean",
-    "test": "jest",
-    "lint": "eslint src --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "rebuild": "npm run clean && npm run build",
+    
+    "// === LOCAL DEVELOPMENT ===": "",
+    "dev": "ts-node local-server.ts",
+    "dev:watch": "nodemon --watch src --ext ts --exec ts-node local-server.ts",
+    "dev:debug": "node --inspect -r ts-node/register local-server.ts",
+    
+    "// === SAM LOCAL TESTING ===": "",
     "sam:build": "sam build",
-    "sam:deploy": "sam deploy --guided",
-    "sam:local": "sam local start-api"
+    "sam:local": "sam local start-api --port 3001",
+    "sam:local:watch": "sam local start-api --port 3001 --warm-containers EAGER",
+    "sam:invoke:create": "sam local invoke CreateOrderFunction --event events/create-order.json",
+    "sam:invoke:get": "sam local invoke GetOrderFunction --event events/get-order.json",
+    "sam:invoke:list": "sam local invoke ListOrdersFunction --event events/list-orders.json",
+    
+    "// === AWS DEPLOYMENT ===": "",
+    "deploy": "npm run build && sam build && sam deploy",
+    "deploy:guided": "npm run build && sam build && sam deploy --guided",
+    "deploy:dev": "npm run build && sam build && sam deploy --parameter-overrides Environment=dev",
+    "deploy:staging": "npm run build && sam build && sam deploy --parameter-overrides Environment=staging --config-env staging",
+    "deploy:prod": "npm run build && sam build && sam deploy --parameter-overrides Environment=prod --config-env prod",
+    
+    "// === AWS LOGS ===": "",
+    "logs:create": "aws logs tail /aws/lambda/dev-create-order --follow",
+    "logs:get": "aws logs tail /aws/lambda/dev-get-order --follow",
+    "logs:list": "aws logs tail /aws/lambda/dev-list-orders --follow",
+    "logs:all": "aws logs tail /aws/lambda/dev-create-order /aws/lambda/dev-get-order /aws/lambda/dev-list-orders --follow",
+    "logs:recent": "aws logs tail /aws/lambda/dev-create-order --since 10m",
+    "logs:errors": "aws logs filter-pattern /aws/lambda/dev-create-order --filter-pattern ERROR --since 1h",
+    
+    "// === AWS INFO ===": "",
+    "info": "aws cloudformation describe-stacks --stack-name orders-service-stack --query 'Stacks[0].Outputs' --output table",
+    "info:api": "aws cloudformation describe-stacks --stack-name orders-service-stack --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' --output text",
+    "info:table": "aws cloudformation describe-stacks --stack-name orders-service-stack --query 'Stacks[0].Outputs[?OutputKey==`OrdersTableName`].OutputValue' --output text",
+    "info:resources": "aws cloudformation describe-stack-resources --stack-name orders-service-stack --output table",
+    
+    "// === AWS DYNAMODB ===": "",
+    "db:scan": "aws dynamodb scan --table-name dev-orders --max-items 10",
+    "db:count": "aws dynamodb describe-table --table-name dev-orders --query 'Table.ItemCount'",
+    "db:clear": "aws dynamodb delete-table --table-name dev-orders && aws cloudformation deploy --stack-name orders-service-stack",
+    
+    "// === TESTING ===": "",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:e2e": "jest --testPathPattern=tests/e2e",
+    
+    "// === CODE QUALITY ===": "",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm run typecheck && npm run lint && npm run format:check",
+    
+    "// === API TESTING (requires jq) ===": "",
+    "api:test:create": "curl -X POST $(npm run info:api -s)/orders -H 'Content-Type: application/json' -d @events/create-order-payload.json | jq",
+    "api:test:list": "curl -s $(npm run info:api -s)/orders?userId=user-123 | jq",
+    
+    "// === STACK MANAGEMENT ===": "",
+    "stack:delete": "aws cloudformation delete-stack --stack-name orders-service-stack",
+    "stack:status": "aws cloudformation describe-stacks --stack-name orders-service-stack --query 'Stacks[0].StackStatus' --output text",
+    "stack:events": "aws cloudformation describe-stack-events --stack-name orders-service-stack --max-items 20 --output table",
+    "stack:drift": "aws cloudformation detect-stack-drift --stack-name orders-service-stack",
+    
+    "// === METRICS & MONITORING ===": "",
+    "metrics:lambda": "aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Invocations --dimensions Name=FunctionName,Value=dev-create-order --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) --end-time $(date -u +%Y-%m-%dT%H:%M:%S) --period 300 --statistics Sum",
+    "metrics:api": "aws cloudwatch get-metric-statistics --namespace AWS/ApiGateway --metric-name Count --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) --end-time $(date -u +%Y-%m-%dT%H:%M:%S) --period 300 --statistics Sum",
+    
+    "// === UTILITIES ===": "",
+    "setup": "npm install && npm run build",
+    "doctor": "node -v && npm -v && aws --version && sam --version && docker --version",
+    "clean:all": "rm -rf node_modules dist .aws-sam package-lock.json && npm install",
+    "update:deps": "npm update && npm audit fix"
   },
   "keywords": [
     "serverless",
@@ -26,8 +98,10 @@
   "license": "MIT",
   "devDependencies": {
     "@types/aws-lambda": "^8.10.131",
+    "@types/express": "^5.0.5",
     "@types/node": "^20.11.5",
     "@types/uuid": "^9.0.7",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "dependencies": {
@@ -36,6 +110,7 @@
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/client-sqs": "^3.490.0",
     "@aws-sdk/lib-dynamodb": "^3.490.0",
+    "express": "^5.1.0",
     "uuid": "^9.0.1"
   }
 }

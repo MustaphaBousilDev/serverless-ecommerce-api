@@ -8,7 +8,7 @@ Globals:
     Runtime: nodejs20.x
     MemorySize: 512
     Architectures:
-      - arm64
+      - x86_64
     Environment:
       Variables:
         NODE_ENV: !Ref Environment
@@ -72,8 +72,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${Environment}-create-order'
-      CodeUri: ./dist
-      Handler: handlers/http/createOrder.handler
+      CodeUri: .
+      Handler: dist/handlers/http/createOrder.handler
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
@@ -89,8 +89,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${Environment}-get-order'
-      CodeUri: ./dist
-      Handler: handlers/http/getOrder.handler
+      CodeUri: .
+      Handler: dist/handlers/http/getOrder.handler
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref OrdersTable
@@ -106,8 +106,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${Environment}-list-orders'
-      CodeUri: ./dist
-      Handler: handlers/http/listOrders.handler
+      CodeUri: .
+      Handler: dist/handlers/http/listOrders.handler
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref OrdersTable
