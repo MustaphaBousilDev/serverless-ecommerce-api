@@ -119,6 +119,40 @@ Resources:
             Path: /orders
             Method: GET
 
+  UpdateOrderStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-update-order-status'
+      CodeUri: .
+      Handler: dist/handlers/http/updateOrderStatus.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        UpdateOrderStatusApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref OrdersApi
+            Path: /orders/{orderId}/status
+            Method: PUT
+
+  DeleteOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-delete-order'
+      CodeUri: .
+      Handler: dist/handlers/http/deleteOrder.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        DeleteOrderApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref OrdersApi
+            Path: /orders/{orderId}
+            Method: DELETE
+
   CreateOrderLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -137,6 +171,19 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${Environment}-list-orders'
       RetentionInDays: 7
 
+
+  UpdateOrderStatusLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${Environment}-update-order-status'
+      RetentionInDays: 7
+
+  DeleteOrderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${Environment}-delete-order'
+      RetentionInDays: 7
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
@@ -145,3 +192,11 @@ Outputs:
   OrdersTableName:
     Description: DynamoDB Orders table name
     Value: !Ref OrdersTable
+
+  UpdateOrderStatusFunctionArn:
+    Description: Update Order Status Lambda Function ARN
+    Value: !GetAtt UpdateOrderStatusFunction.Arn
+
+  DeleteOrderFunctionArn:
+    Description: Delete Order Lambda Function ARN
+    Value: !GetAtt DeleteOrderFunction.Arn

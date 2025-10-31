@@ -3,6 +3,8 @@ import express from 'express';
 import { handler as createOrderHandler } from './src/handlers/http/createOrder';
 import { handler as getOrderHandler } from './src/handlers/http/getOrder';
 import { handler as listOrdersHandler } from './src/handlers/http/listOrders';
+import { handler as updateOrderStatusHandler } from './src/handlers/http/updateOrderStatus';
+import { handler as deleteOrderHandler } from './src/handlers/http/deleteOrder';
 
 const app = express();
 app.use(express.json());
@@ -67,6 +69,31 @@ app.get('/orders', async (req, res) => {
   }
 });
 
+app.put('/orders/:orderId/status', async (req, res) => {
+  try {
+    const mockEvent = createMockEvent(req, 'PUT');
+    const result = await updateOrderStatusHandler(mockEvent);
+    res.status(result.statusCode)
+       .set(result.headers || {})
+       .send(result.body);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/orders/:orderId', async (req, res) => {
+  try {
+    const mockEvent = createMockEvent(req, 'DELETE');
+    const result = await deleteOrderHandler(mockEvent);
+    res.status(result.statusCode)
+       .set(result.headers || {})
+       .send(result.body);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Local API Server Running!`);
@@ -75,5 +102,7 @@ app.listen(PORT, () => {
   console.log(`  POST   http://localhost:${PORT}/orders`);
   console.log(`  GET    http://localhost:${PORT}/orders/:orderId`);
   console.log(`  GET    http://localhost:${PORT}/orders?userId=xxx`);
+  console.log(`  PUT    http://localhost:${PORT}/orders/:orderId/status`);   // NEW!
+  console.log(`  DELETE http://localhost:${PORT}/orders/:orderId`);  
   console.log(`\n✅ Using REAL AWS DynamoDB (table: dev-orders)\n`);
 });
