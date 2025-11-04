@@ -28,10 +28,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return badRequest('Validation failed', validation.errors);
     }
 
-
     const orderRepository = new DynamoDBOrderRepository();
     const createOrderUseCase = new CreateOrderUseCase(orderRepository);
-
 
     logger.info('Creating order', { userId: requestBody.userId, itemCount: requestBody.items.length });
     
@@ -43,16 +41,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     logger.info('Order created successfully', { orderId: result.orderId });
 
-
     return created(result, 'Order created successfully');
-
   } catch (error: any) {
-
     if (error instanceof ValidationError) {
       logger.warn('Validation error', { error: error.message });
       return badRequest(error.message, error.validationErrors);
     }
-
 
     logger.error('Unexpected error creating order', error);
     return internalError('Failed to create order');

@@ -11,9 +11,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "declaration": true,
-    "sourceMap": true
+    "types": ["node", "jest"],
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests", ".aws-sam"]
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist", ".aws-sam"]
 }
