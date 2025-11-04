@@ -49,7 +49,6 @@
     "test:coverage": "jest --coverage",
     "test:unit": "jest --testPathPattern=tests/unit",
     "test:integration": "jest --testPathPattern=tests/integration",
-    "test:e2e": "jest --testPathPattern=tests/e2e",
     "// === CODE QUALITY ===": "",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -72,7 +71,9 @@
     "setup": "npm install && npm run build",
     "doctor": "node -v && npm -v && aws --version && sam --version && docker --version",
     "clean:all": "rm -rf node_modules dist .aws-sam package-lock.json && npm install",
-    "update:deps": "npm update && npm audit fix"
+    "update:deps": "npm update && npm audit fix",
+    "test:e2e": "API_URL=https://fdkb9rpndj.execute-api.us-east-1.amazonaws.com/dev jest tests/e2e",
+    "test:e2e:watch": "API_URL=https://fdkb9rpndj.execute-api.us-east-1.amazonaws.com/dev jest tests/e2e --watch"
   },
   "keywords": [
     "serverless",
@@ -102,6 +103,7 @@
     "@aws-sdk/client-eventbridge": "^3.490.0",
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/client-sqs": "^3.490.0",
+    "axios": "^1.13.2",
     "express": "^5.1.0",
     "uuid": "^9.0.1"
   }
