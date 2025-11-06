@@ -1,7 +1,7 @@
 import { Order, OrderStatus } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
-
+import { EventPublisher } from '../../infrastructure/events/EventPublisher';
 export interface UpdateOrderStatusInput {
   orderId: string;
   status: OrderStatus;
@@ -14,7 +14,10 @@ export interface UpdateOrderStatusOutput {
 }
 
 export class UpdateOrderStatusUseCase {
-    constructor(private orderRepository: IOrderRepository) {}
+    constructor(
+      private orderRepository: IOrderRepository,
+      private eventPublisher: EventPublisher = new EventPublisher()
+    ) {}
 
     async execute(input: UpdateOrderStatusInput): Promise<UpdateOrderStatusOutput> {
 
@@ -34,6 +37,9 @@ export class UpdateOrderStatusUseCase {
       throw new Error('Order not found');
     }
 
+    // store old status for event
+    const oldStatus = order.status;
+
 
     switch (input.status) {
       case OrderStatus.CONFIRMED:
@@ -41,6 +47,9 @@ export class UpdateOrderStatusUseCase {
         break;
       case OrderStatus.SHIPPED:
         order.ship();
+        break;
+      case OrderStatus.DELIVERED:
+        order.deliver()
         break;
       case OrderStatus.CANCELLED:
         order.cancel();
@@ -52,6 +61,12 @@ export class UpdateOrderStatusUseCase {
     // 4. Save updated order
     await this.orderRepository.update(order);
 
+    try {
+      await this.eventPublisher.publishOrderStatusChanged(order, oldStatus)
+    } catch(error) {
+      console.error('⚠️ Failed to publish OrderStatusChanged event:', error);
+    }
+
     // 5. Return output
     return {
       orderId: order.orderId.value,
@@ -59,4 +74,6 @@ export class UpdateOrderStatusUseCase {
       updatedAt: order.updatedAt.toISOString(),
     };
   }
+
+  
 }

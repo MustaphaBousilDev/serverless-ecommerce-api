@@ -4,6 +4,7 @@ import { Order } from '../../domain/entities/Order';
 import { OrderItem } from '../../domain/entities/OrderItem';
 import { Address } from '../../domain/value-objects/Address';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
+import { EventPublisher } from '../../infrastructure/events/EventPublisher'
 
 export interface CreateOrderInput {
   userId: string;
@@ -31,7 +32,10 @@ export interface CreateOrderOutput {
 }
 
 export class CreateOrderUseCase {
-  constructor(private orderRepository: IOrderRepository) {}
+  constructor(
+    private orderRepository: IOrderRepository,
+    private eventPublisher: EventPublisher  = new EventPublisher()
+  ) {}
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
     // 1. Validate input
@@ -55,6 +59,12 @@ export class CreateOrderUseCase {
 
     // 4. Persist order
     await this.orderRepository.save(order);
+
+    try {
+      await this.eventPublisher.publishOrderCreated(order);
+    } catch(error) {
+      console.error('⚠️ Failed to publish OrderCreated event, but order was created:', error)
+    }
 
     // 5. Return output
     return {

@@ -1,5 +1,5 @@
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { Order } from '../../../../orders/src/domain/entities/Order';
+import { Order } from '../../domain/entities/Order';
 
 export interface OrderEvent {
     source: string;
@@ -15,6 +15,7 @@ export class EventPublisher {
         this.client = new EventBridgeClient({
             region: process.env.EVENT_BUS_NAME || 'dev-orders-event-bus'
         })
+        this.eventBusName = process.env.EVENT_BUS_NAME || 'dev-orders-event-bus';
     }
 
     async publishOrderCreated(order: Order): Promise<void>{

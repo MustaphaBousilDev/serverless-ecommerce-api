@@ -97,6 +97,14 @@ export class Order {
     this.props.updatedAt = new Date();
   }
 
+  deliver(): void {
+    if (this.status !== OrderStatus.SHIPPED) {
+      throw new Error('Order must be shipped before it can be delivered');
+    }
+    this.props.status = OrderStatus.DELIVERED;
+    this.props.updatedAt = new Date();
+  }
+
   // Getters
   get orderId(): OrderId {
     return this.props.orderId;
