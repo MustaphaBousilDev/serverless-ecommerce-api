@@ -14,6 +14,7 @@ Globals:
         NODE_ENV: !Ref Environment
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
         ORDERS_TABLE_NAME: !Ref OrdersTable
+        EVENT_BUS_NAME: dev-orders-event-bus
 
     Tracing: Active
 
@@ -77,6 +78,12 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        # Add Permission for this function to can send evenPublisher 
+        - Statement:
+            - Effect: Allow 
+              Action:
+                - events:PutEvents
+              Resource: '*'
       Events:
         CreateOrderApi:
           Type: Api
@@ -128,6 +135,12 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        # Add Permission for this function to can send evenPublisher 
+        - Statement:
+            - Effect: Allow 
+              Action:
+                - events:PutEvents
+              Resource: '*'
       Events:
         UpdateOrderStatusApi:
           Type: Api
@@ -145,6 +158,12 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        # Add Permission for this function to can send evenPublisher 
+        - Statement:
+            - Effect: Allow 
+              Action:
+                - events:PutEvents
+              Resource: '*'
       Events:
         DeleteOrderApi:
           Type: Api

@@ -13,9 +13,13 @@ export class EventPublisher {
 
     constructor(){
         this.client = new EventBridgeClient({
-            region: process.env.EVENT_BUS_NAME || 'dev-orders-event-bus'
+            region: process.env.AWS_REGION || 'us-east-1'
         })
         this.eventBusName = process.env.EVENT_BUS_NAME || 'dev-orders-event-bus';
+        console.log('##-- EventPublisher initialized:', {
+            region: process.env.AWS_REGION || 'us-east-1',
+            eventBusName: this.eventBusName
+        });
     }
 
     async publishOrderCreated(order: Order): Promise<void>{
