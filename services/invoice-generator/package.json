@@ -1,0 +1,27 @@
+{
+  "name": "invoice-generator-service",
+  "version": "1.0.0",
+  "description": "Invoice Generator Lambda Function",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "rm -rf dist .aws-sam",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["lambda", "invoice", "pdf"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.675.0",
+    "@aws-sdk/client-sqs": "^3.675.0",
+    "pdfkit": "^0.15.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.7.5",
+    "@types/pdfkit": "^0.13.5",
+    "typescript": "^5.6.3"
+  }
+}
