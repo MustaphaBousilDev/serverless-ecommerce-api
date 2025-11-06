@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Event-Driven Infrastructure - EventBridge Event Bus 
+
+Parameters:
+  Environment:
+    Type: String 
+    Default: dev 
+    AllowedValues:
+      - dev 
+      - staging 
+      - prod 
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30 
+    MemorySize: 256 
+    Environment:
+      Variables:
+        NODE_ENV: !Ref Environment
+        EVENT_BUS_NAME: !Ref OrdersEventBus
+
+Resources:
+  # ===================================
+  # EventBridge Event Bus
+  # ===================================
+  OrdersEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub '${Environment}-orders-event-bus'
+
+  # ===================================
+  # EventBridge Archive (for replay)
+  # ===================================
+  OrdersEventArchive:
+    Type: AWS::Events::Archive
+    Properties:
+      ArchiveName: !Sub '${Environment}-orders-event-archive'
+      SourceArn: !GetAtt OrdersEventBus.Arn
+      RetentionDays: 7
+      Description: Archive of all order events for 7 days
+  # ===================================
+  # SQS Queue: Invoice Generator
+  # ===================================
+  InvoiceGeneratorQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-invoice-generator-queue'
+      VisibilityTimeout: 180
+      MessageRetentionPeriod: 1209600  # 14 days
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt InvoiceGeneratorDLQ.Arn
+        maxReceiveCount: 3
+
+  InvoiceGeneratorDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-invoice-generator-dlq'
+      MessageRetentionPeriod: 1209600  # 14 days
+  # ===================================
+  # SQS Queue: Email Notifier
+  # ===================================
+  EmailNotifierQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-email-notifier-queue'
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EmailNotifierDLQ.Arn
+        maxReceiveCount: 3
+
+  EmailNotifierDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-email-notifier-dlq'
+      MessageRetentionPeriod: 1209600
+  # ===================================
+  # EventBridge Rules
+  # ===================================
+  # Route OrderCreated events to Invoice Generator
+  OrderCreatedToInvoiceRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${Environment}-order-created-to-invoice'
+      EventBusName: !Ref OrdersEventBus
+      EventPattern:
+        source:
+          - orders.service
+        detail-type:
+          - OrderCreated
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt InvoiceGeneratorQueue.Arn
+          Id: InvoiceGeneratorTarget
+  # Route OrderCreated events to Email Notifier
+  OrderCreatedToEmailRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${Environment}-order-created-to-email'
+      EventBusName: !Ref OrdersEventBus
+      EventPattern:
+        source:
+          - orders.service
+        detail-type:
+          - OrderCreated
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt EmailNotifierQueue.Arn
+          Id: EmailNotifierTarget
+  # Route OrderStatusChanged to Email Notifier
+  OrderStatusChangedToEmailRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${Environment}-order-status-changed-to-email'
+      EventBusName: !Ref OrdersEventBus
+      EventPattern:
+        source:
+          - orders.service
+        detail-type:
+          - OrderStatusChanged
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt EmailNotifierQueue.Arn
+          Id: EmailNotifierTarget2
+  # ===================================
+  # SQS Queue Policies (Allow EventBridge to send)
+  # ===================================
+  InvoiceGeneratorQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref InvoiceGeneratorQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt InvoiceGeneratorQueue.Arn
+  EmailNotifierQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EmailNotifierQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt EmailNotifierQueue.Arn
+  # ===================================
+  # S3 Bucket for Invoices
+  # ===================================
+  InvoicesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Environment}-orders-invoices-${AWS::AccountId}'
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldInvoices
+            Status: Enabled
+            ExpirationInDays: 90
+  
+Outputs:
+  EventBusName:
+    Description: EventBridge Event Bus Name
+    Value: !Ref OrdersEventBus
+    Export:
+      Name: !Sub '${Environment}-OrdersEventBusName'
+
+  EventBusArn:
+    Description: EventBridge Event Bus ARN
+    Value: !GetAtt OrdersEventBus.Arn
+    Export:
+      Name: !Sub '${Environment}-OrdersEventBusArn'
+
+  InvoiceGeneratorQueueUrl:
+    Description: Invoice Generator Queue URL
+    Value: !Ref InvoiceGeneratorQueue
+
+  EmailNotifierQueueUrl:
+    Description: Email Notifier Queue URL
+    Value: !Ref EmailNotifierQueue
+
+  InvoicesBucketName:
+    Description: S3 Bucket for Invoices
+    Value: !Ref InvoicesBucket
+    Export:
+      Name: !Sub '${Environment}-InvoicesBucketName'

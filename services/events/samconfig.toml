@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "events-infrastructure-stack"
+resolve_s3 = true
+s3_prefix = "events-infrastructure-stack"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+parameter_overrides = "Environment=\"dev\""
+image_repositories = []
+
+[default.global.parameters]
+region = "us-east-1"
