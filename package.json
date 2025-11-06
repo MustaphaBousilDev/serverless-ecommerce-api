@@ -16,7 +16,12 @@
     "sam:deploy": "sam deploy --guided",
     "sam:local": "sam local start-api"
   },
-  "keywords": ["serverless", "aws", "lambda", "clean-architecture"],
+  "keywords": [
+    "serverless",
+    "aws",
+    "lambda",
+    "clean-architecture"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
@@ -34,7 +39,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.490.0",
-    "@aws-sdk/client-eventbridge": "^3.490.0",
+    "@aws-sdk/client-eventbridge": "^3.925.0",
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/client-sqs": "^3.490.0",
     "@aws-sdk/lib-dynamodb": "^3.490.0",
