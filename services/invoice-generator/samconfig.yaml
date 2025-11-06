@@ -1,0 +1,15 @@
+default:
+  deploy:
+    parameters:
+      stack_name: invoice-generator-stack
+      resolve_s3: true
+      s3_prefix: invoice-generator-stack
+      region: us-east-1
+      capabilities: CAPABILITY_IAM
+      disable_rollback: true
+      parameter_overrides: Environment="dev"
+      image_repositories: []
+  global:
+    parameters:
+      region: us-east-1
+version: 0.1

@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Invoice Generator Service
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging 
+      - prod
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 60
+    MemorySize: 512
+    Environment:
+      Variables:
+        NODE_ENV: !Ref Environment
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
+Resources:
+  InvoiceGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-invoice-generator'
+      CodeUri: .
+      Handler: dist/handlers/generateInvoice.handler
+      Environment:
+        Variables:
+          INVOICES_BUCKET_NAME: !Sub '${Environment}-orders-invoices-${AWS::AccountId}'
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Sub '${Environment}-orders-invoices-${AWS::AccountId}'
+        - SQSPollerPolicy:
+            QueueName: !Sub '${Environment}-invoice-generator-queue'
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-invoice-generator-queue'
+            BatchSize: 10
+            MaximumBatchingWindowInSeconds: 5
+
+  # CloudWatch Log Group
+  InvoiceGeneratorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${Environment}-invoice-generator'
+      RetentionInDays: 7
+
+Outputs:
+  InvoiceGeneratorFunctionArn:
+    Description: Invoice Generator Lambda Function ARN
+    Value: !GetAtt InvoiceGeneratorFunction.Arn
+
+  InvoiceGeneratorFunctionName:
+    Description: Invoice Generator Lambda Function Name
+    Value: !Ref InvoiceGeneratorFunction
+    

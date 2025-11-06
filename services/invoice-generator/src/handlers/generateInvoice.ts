@@ -5,8 +5,9 @@ import PDFDocument from 'pdfkit';
 const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'us-east-1'
 })
-const BUCKET_NAME = process.env.INVOICE_BUCKET_NAME || ''
-
+const BUCKET_NAME = process.env.INVOICES_BUCKET_NAME || ''
+console.log('🪣 BUCKET_NAME from env:', process.env.INVOICES_BUCKET_NAME);
+console.log('🪣 BUCKET_NAME constant:', BUCKET_NAME);
 interface OrderCreatedEvent {
   orderId: string;
   userId: string;
@@ -45,6 +46,10 @@ export const handler: SQSHandler = async (event: SQSEvent): Promise<void>=> {
 
             //upload to s3
             const s3Key = `invoices/${orderData.userId}/${orderData.orderId}.pdf`
+            console.log('📤 About to upload to S3:');
+            console.log('   Bucket:', BUCKET_NAME);
+            console.log('   Key:', s3Key);
+            console.log('   Buffer size:', pdfBuffer.length);
             await s3Client.send(
                 new PutObjectCommand({
                     Bucket: BUCKET_NAME,
@@ -121,10 +126,12 @@ async function generateInvoicePDF(order: OrderCreatedEvent): Promise<Buffer> {
       const tableTop = 300;
       doc
         .fontSize(10)
-        .text('Item', 50, tableTop, { bold: true })
+        .font('Helvetica-Bold')  // ← Use font method instead of bold property
+        .text('Item', 50, tableTop)
         .text('Quantity', 250, tableTop)
         .text('Unit Price', 350, tableTop)
-        .text('Total', 450, tableTop);
+        .text('Total', 450, tableTop)
+        .font('Helvetica');
 
       // Draw line under header
       doc
@@ -157,8 +164,10 @@ async function generateInvoicePDF(order: OrderCreatedEvent): Promise<Buffer> {
       currentY += 20;
       doc
         .fontSize(12)
-        .text('Total Amount:', 350, currentY, { bold: true })
-        .text(`$${order.totalAmount.toFixed(2)}`, 450, currentY);
+        .font('Helvetica-Bold')  // ← Use font method
+        .text('Total Amount:', 350, currentY)
+        .text(`$${order.totalAmount.toFixed(2)}`, 450, currentY)
+        .font('Helvetica');
 
       // Footer
       doc
