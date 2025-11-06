@@ -1,0 +1,25 @@
+{
+  "name": "email-notifier-service",
+  "version": "1.0.0",
+  "description": "Email Notification Service",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "rm -rf dist .aws-sam",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["lambda", "email", "notification"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.675.0",
+    "@aws-sdk/client-sqs": "^3.675.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  }
+}

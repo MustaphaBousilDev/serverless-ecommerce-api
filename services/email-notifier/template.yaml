@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Email Notifier Service
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+  FromEmail:
+    Type: String
+    Description: Verified email address to send emails from
+    Default: bousilmustapha@gmail.com
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        NODE_ENV: !Ref Environment
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
+Resources:
+  EmailNotifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-email-notifier'
+      CodeUri: .
+      Handler: dist/handlers/sendEmail.handler
+      Environment:
+        Variables:
+          FROM_EMAIL: !Ref FromEmail
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - SQSPollerPolicy:
+            QueueName: !Sub '${Environment}-email-notifier-queue'
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Environment}-email-notifier-queue'
+            BatchSize: 10
+            MaximumBatchingWindowInSeconds: 5
+  EmailNotifierLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${Environment}-email-notifier'
+      RetentionInDays: 7
+
+Outputs:
+  EmailNotifierFunctionArn:
+    Description: Email Notifier Lambda Function ARN
+    Value: !GetAtt EmailNotifierFunction.Arn
+
+  EmailNotifierFunctionName:
+    Description: Email Notifier Lambda Function Name
+    Value: !Ref EmailNotifierFunction
