@@ -267,8 +267,10 @@ Resources:
             RestApiId: !Ref AuthApi
             Path: /auth/change-password
             Method: POST
+      
+      
 
-    GetProfileFunction:
+  GetProfileFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${Environment}-auth-profile'
