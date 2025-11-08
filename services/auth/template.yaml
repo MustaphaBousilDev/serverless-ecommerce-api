@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Authentication Service - Cognito User Pool
+
+Parameters:
+  Environment:
+    Type: String 
+    Default: dev 
+    AllowedValues:
+      - dev
+      - staging 
+      - prod 
+
+Resources:
+  # ===================================
+  # Cognito User Pool
+  # ===================================
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName:  !Sub '${Environment}-ecommerce-users'
+      # Allow users to sign in with email
+      UsernameAttributes:
+        - email 
+      #Auto-verify email addresses 
+      AutoVerifiedAttributes:
+        - email 
+      #Password Policy 
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true 
+          RequireLowercase: true 
+          RequireNumbers: true 
+          RequireSymbols: true 
+      # User attributes schema
+      Schema:
+        - Name: email 
+          AttributeDataType: String 
+          Required: true 
+          Mutable: false 
+        - Name: name 
+          AttributeDataType: String 
+          Required: true 
+          Mutable: true 
+        - Name: phone_number 
+          AttributeDataType: String 
+          Required: false 
+          Mutable: true 
+
+      # Email configuration
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT 
+
+      # Account recovery
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+      # User pool tags 
+      UserPoolTags:
+        Environment: !Ref Environment
+        Service: authentication
+
+
+  # ===================================
+  # Cognito User Pool Client
+  # ===================================
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${Environment}-ecommerce-web-client'
+      UserPoolId: !Ref UserPool
+
+      # Authentication Flows
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+      # Token Validity 
+      AccessTokenValidity: 1  # 1 hour
+      IdTokenValidity: 1      # 1 hour
+      RefreshTokenValidity: 30 # 30 days
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+
+      # Prevent user existence errors
+      PreventUserExistenceErrors: ENABLED
+
+      # Read/Write attributes
+      ReadAttributes:
+        - email 
+        - email_verified 
+        - name 
+        - phone_number 
+      WriteAttributes:
+        - email 
+        - name 
+        - phone_number
+
+  # ===================================
+  # Cognito User Pool Domain
+  # ===================================
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub '${Environment}-ecommerce-${AWS::AccountId}'
+      UserPoolId: !Ref UserPool
+
+
+Outputs:
+  UserPoolId:
+    Description: Cognito User Pool ID 
+    Value: !Ref UserPool 
+    Export:
+      Name: !Sub '${Environment}-UserPoolId'
+
+  UserPoolArn:
+    Description: Cognito User Pool ARN 
+    Value: !GetAtt UserPool.Arn
+    Export:
+      Name: !Sub '${Environment}-UserPoolArn'
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID 
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub '${Environment}-UserPoolClientId'
+
+  UserPoolDomain:
+    Description: Cognito User Pool Domain 
+    Value: !Sub '${Environment}-ecommerce-${AWS::AccountId}'
+
+  CognitoLoginUrl:
+    Description: Cognito Hosted UI Login URL 
+    Value: !Sub 'https://${Environment}-ecommerce-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com/login'
