@@ -3,16 +3,24 @@ import { CreateOrderUseCase } from '../../application/usecases/CreateOrderUseCas
 import { DynamoDBOrderRepository } from '../../infrastructure/repositories/DynamoDBOrderRepository';
 import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 import { CreateOrderRequestDto } from '../../interfaces/dtos/CreateOrderDto';
-import { created, badRequest, internalError } from '../../shared/utils/response';
+import { created, badRequest, internalError, errorResponse } from '../../shared/utils/response';
 import { createLogger } from '../../shared/utils/logger';
 import { ValidationError } from '../../shared/errors';
+import { getUserFromEvent, requireAuth } from '../../shared/utils/auth';
 
 const logger = createLogger('CreateOrderHandler');
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+
+
+
   logger.info('CreateOrder handler invoked', { requestId: event.requestContext.requestId });
+  
+
 
   try {
+     const user = requireAuth(event);
+     console.log('Creating order for user:', user.email);
     if (!event.body) {
       logger.warn('Request body is empty');
       return badRequest('Request body is required');
@@ -34,7 +42,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     logger.info('Creating order', { userId: requestBody.userId, itemCount: requestBody.items.length });
     
     const result = await createOrderUseCase.execute({
-      userId: requestBody.userId,
+      userId: user.email,
       items: requestBody.items,
       shippingAddress: requestBody.shippingAddress,
     });
@@ -52,3 +60,4 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalError('Failed to create order');
   }
 };
+

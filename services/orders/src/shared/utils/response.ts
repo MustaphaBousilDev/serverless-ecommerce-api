@@ -94,3 +94,31 @@ export const created = <T>(data: T, message: string = 'Resource created successf
 export const ok = <T>(data: T, message: string = 'Success'): APIGatewayProxyResult => {
   return success(200, data, message);
 };
+
+export const successResponse = (statusCode: number, data: any) => ({
+    statusCode,
+    headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+    },
+    body: JSON.stringify({
+        success: true,
+        data,
+    })
+})
+
+export const errorResponse = (statusCode: number, message: string, error?: any) => ({
+    statusCode, 
+    headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+    },
+    body: JSON.stringify({
+        success: false,
+        message,
+        error: error?.message || error,
+    })
+})
+

@@ -40,6 +40,12 @@ Resources:
       Name: !Sub '${Environment}-orders-api'
       StageName: !Ref Environment
       TracingEnabled: true
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn:
+              Fn::ImportValue: !Sub '${Environment}-UserPoolArn'
 
   OrdersTable:
     Type: AWS::DynamoDB::Table
