@@ -1,0 +1,23 @@
+{
+  "name": "auth-service",
+  "version": "1.0.0",
+  "description": "Authentication Service with Cognito",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "rm -rf dist .aws-sam",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "keywords": ["auth", "cognito", "lambda"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.675.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  }
+}
