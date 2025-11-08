@@ -11,7 +11,35 @@ Parameters:
       - staging 
       - prod 
 
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        NODE_ENV: !Ref Environment
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+        COGNITO_USER_POOL_ID: !Ref UserPool
+        COGNITO_CLIENT_ID: !Ref UserPoolClient
+
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,Authorization'"
+      AllowOrigin: "'*'"
+
+
 Resources:
+  # ===================================
+  # API Gateway
+  # ===================================
+  AuthApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub '${Environment}-auth-api'
+      StageName: !Ref Environment
+
   # ===================================
   # Cognito User Pool
   # ===================================
@@ -111,8 +139,162 @@ Resources:
       Domain: !Sub '${Environment}-ecommerce-${AWS::AccountId}'
       UserPoolId: !Ref UserPool
 
+  # ===================================
+  # Lambda Functions
+  # ===================================
+  RegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-register'
+      CodeUri: .
+      Handler: dist/handlers/register.handler
+      Events:
+        RegisterApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/register
+            Method: POST
+
+  ConfirmRegistrationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-confirm'
+      CodeUri: .
+      Handler: dist/handlers/confirmRegistration.handler
+      Events:
+        ConfirmApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/confirm
+            Method: POST
+
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-login'
+      CodeUri: .
+      Handler: dist/handlers/login.handler
+      Events:
+        LoginApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/login
+            Method: POST
+
+  RefreshTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-refresh'
+      CodeUri: .
+      Handler: dist/handlers/refreshToken.handler
+      Events:
+        RefreshApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/refresh
+            Method: POST
+
+
+  LogoutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-logout'
+      CodeUri: .
+      Handler: dist/handlers/logout.handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:GlobalSignOut
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        LogoutApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/logout
+            Method: POST
+
+
+  ForgotPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-forgot-password'
+      CodeUri: .
+      Handler: dist/handlers/forgotPassword.handler
+      Events:
+        ForgotPasswordApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/forgot-password
+            Method: POST
+
+  ResetPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-reset-password'
+      CodeUri: .
+      Handler: dist/handlers/resetPassword.handler
+      Events:
+        ResetPasswordApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/reset-password
+            Method: POST
+
+  ChangePasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-change-password'
+      CodeUri: .
+      Handler: dist/handlers/changePassword.handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ChangePassword
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        ChangePasswordApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/change-password
+            Method: POST
+
+    GetProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-auth-profile'
+      CodeUri: .
+      Handler: dist/handlers/getProfile.handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:GetUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        GetProfileApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuthApi
+            Path: /auth/profile
+            Method: GET
+
 
 Outputs:
+  AuthApiUrl:
+    Description: Auth API Gateway URL
+    Value: !Sub 'https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${Environment}-AuthApiUrl'
   UserPoolId:
     Description: Cognito User Pool ID 
     Value: !Ref UserPool 
