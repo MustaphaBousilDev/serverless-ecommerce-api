@@ -58,3 +58,77 @@ Thumbs.db
 .dynamodb/
 .localstack/
 docker-compose.override.yml
+
+
+❌ AWS credentials
+❌ API keys / secrets
+❌ Environment variables with sensitive data
+❌ Compiled code / build artifacts
+❌ SAM deployment artifacts
+❌ Node modules
+
+
+📄 Complete .gitignore:
+gitignore# AWS SAM
+.aws-sam/
+samconfig.toml          # Contains stack names, S3 buckets
+packaged.yaml
+template-output.yaml
+
+# AWS Credentials (CRITICAL!)
+.aws/
+credentials
+config
+*.pem
+*.key
+
+# Environment Variables
+.env
+.env.*
+.env.local
+.env.production
+
+# Secrets
+secrets.json
+*.secret
+.secrets/
+
+# Build outputs
+dist/
+build/
+*.js.map
+.build/
+
+# Dependencies
+node_modules/
+package-lock.json       # Optional - some keep this
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+.eclipse/
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Temporary
+*.tmp
+.tmp/
+temp/
