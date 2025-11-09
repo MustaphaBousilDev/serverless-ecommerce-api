@@ -3,9 +3,16 @@
 import { Order } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
+import { errorResponse } from '../../shared';
 
 export interface GetOrderInput {
   orderId: string;
+}
+
+export interface UserAuth {
+  email: string;
+  name?: string;
+  sub: string;
 }
 
 export interface GetOrderOutput {
@@ -34,15 +41,20 @@ export interface GetOrderOutput {
 export class GetOrderUseCase {
   constructor(private orderRepository: IOrderRepository) {}
 
-  async execute(input: GetOrderInput): Promise<GetOrderOutput> {
+  async execute(input: GetOrderInput, user: UserAuth): Promise<GetOrderOutput> {
     // 1. Validate input
     if (!input.orderId) {
       throw new Error('orderId is required');
     }
+    
 
     // 2. Get order from repository
     const orderId = new OrderId(input.orderId);
     const order = await this.orderRepository.findById(orderId);
+
+    if (order?.userId !== user.email) {
+      throw  new Error('Forbidden - You can only access your own orders');
+    }
 
     // 3. Check if order exists
     if (!order) {

@@ -5,6 +5,7 @@ import { ok, badRequest, notFound, internalError } from '../../shared/utils/resp
 import { createLogger } from '../../shared/utils/logger';
 import { ValidationError } from '../../shared/errors';
 import { OrderStatus } from '../../domain/entities/Order';
+import { requireAuth } from '../../shared/utils/auth';
 
 const logger = createLogger('UpdateOrderStatusHandler');
 
@@ -12,6 +13,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   logger.info('UpdateOrderStatus handler invoked', { requestId: event.requestContext.requestId });
 
   try {
+    const user = requireAuth(event);
+    console.log('Listing orders for user:', user.email);
     // 1. Get orderId from path parameters
     const orderId = event.pathParameters?.orderId;
 
@@ -47,7 +50,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const result = await updateOrderStatusUseCase.execute({
       orderId,
       status: body.status,
-    });
+      
+    }, user);
 
     logger.info('Order status updated successfully', { orderId });
 

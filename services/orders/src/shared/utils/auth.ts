@@ -37,6 +37,7 @@ export function getUserFromEvent(event: APIGatewayProxyEvent): AuthenticatedUser
 export function requireAuth(event: APIGatewayProxyEvent): AuthenticatedUser {
   const user = getUserFromEvent(event);
   
+  
   if (!user) {
     throw new Error('Unauthorized - Invalid or missing authentication token');
   }

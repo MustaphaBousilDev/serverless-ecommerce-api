@@ -27,7 +27,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const requestBody: CreateOrderRequestDto = JSON.parse(event.body);
-    logger.debug('Parsed request body', { userId: requestBody.userId });
+    logger.debug('Parsed request body', { userId: user.email });
 
 
     const validation = OrderValidator.validateCreateOrder(requestBody);
@@ -39,7 +39,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const orderRepository = new DynamoDBOrderRepository();
     const createOrderUseCase = new CreateOrderUseCase(orderRepository);
 
-    logger.info('Creating order', { userId: requestBody.userId, itemCount: requestBody.items.length });
+    logger.info('Creating order', { userId: user.email, itemCount: requestBody.items.length });
     
     const result = await createOrderUseCase.execute({
       userId: user.email,

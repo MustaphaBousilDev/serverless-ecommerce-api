@@ -2,7 +2,7 @@
 
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { CreateOrderUseCase, CreateOrderInput, CreateOrderOutput } from '../usecases/CreateOrderUseCase';
-import { GetOrderUseCase, GetOrderInput, GetOrderOutput } from '../usecases/GetOrderUseCase';
+import { GetOrderUseCase, GetOrderInput, GetOrderOutput, UserAuth } from '../usecases/GetOrderUseCase';
 import { ListOrdersUseCase, ListOrdersInput, ListOrdersOutput } from '../usecases/ListOrdersUseCase';
 
 /**
@@ -24,8 +24,8 @@ export class OrderApplicationService {
     return this.createOrderUseCase.execute(input);
   }
 
-  async getOrder(input: GetOrderInput): Promise<GetOrderOutput> {
-    return this.getOrderUseCase.execute(input);
+  async getOrder(input: GetOrderInput, user: UserAuth): Promise<GetOrderOutput> {
+    return this.getOrderUseCase.execute(input,user);
   }
 
   async listOrders(input: ListOrdersInput): Promise<ListOrdersOutput> {

@@ -5,6 +5,7 @@ import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 import { ok, badRequest, notFound, internalError } from '../../shared/utils/response';
 import { createLogger } from '../../shared/utils/logger';
 import { NotFoundError, ValidationError } from '../../shared/errors';
+import { requireAuth } from '../../shared/utils/auth';
 
 const logger  = createLogger('GetOrderHandler')
 
@@ -13,6 +14,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         requestId : event.requestContext.requestId
     })
     try {
+        const user = requireAuth(event);
         const orderId = event.pathParameters?.orderId
         if(!orderId){
             logger.warn('Order ID is missing from path parameters')
@@ -30,7 +32,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const orderRepository = new DynamoDBOrderRepository()
         const getOrderUseCase = new GetOrderUseCase(orderRepository)
 
-        const result = await getOrderUseCase.execute({ orderId })
+        const result = await getOrderUseCase.execute({ orderId }, user)
         logger.info('========= Order retrieved successfully ', { orderId })
         return ok(result, 'Order retrieved successfully')
     } catch(error: any) {

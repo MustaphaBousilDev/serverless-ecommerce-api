@@ -13,13 +13,19 @@ export interface UpdateOrderStatusOutput {
   updatedAt: string;
 }
 
+interface UserAuth {
+  email: string;
+  name?: string;
+  sub: string;
+}
+
 export class UpdateOrderStatusUseCase {
     constructor(
       private orderRepository: IOrderRepository,
       private eventPublisher: EventPublisher = new EventPublisher()
     ) {}
 
-    async execute(input: UpdateOrderStatusInput): Promise<UpdateOrderStatusOutput> {
+    async execute(input: UpdateOrderStatusInput, user: UserAuth): Promise<UpdateOrderStatusOutput> {
 
     if (!input.orderId) {
       throw new Error('orderId is required');
@@ -36,6 +42,12 @@ export class UpdateOrderStatusUseCase {
     if (!order) {
       throw new Error('Order not found');
     }
+
+    if (order?.userId !== user.email) {
+      throw  new Error('Forbidden - You can only access your own orders');
+    }
+
+    
 
     // store old status for event
     const oldStatus = order.status;
