@@ -6,18 +6,31 @@
   "scripts": {
     "clean": "rm -rf dist .aws-sam",
     "prebuild": "npm run clean",
+    "sam:build": "sam build",
+    "sam:local": "sam local start-api --port 3001",
+    "sam:local:watch": "sam local start-api --port 3001 --warm-containers EAGER",
     "build": "tsc",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "dev": "ts-node local-server.ts"
   },
-  "keywords": ["auth", "cognito", "lambda"],
+  "keywords": [
+    "auth",
+    "cognito",
+    "lambda"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-cognito-identity-provider": "^3.675.0"
+    "@aws-sdk/client-cognito-identity-provider": "^3.675.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
+    "@types/express": "^5.0.5",
     "@types/node": "^22.7.5",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   }
 }
