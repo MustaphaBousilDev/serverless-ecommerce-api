@@ -4,10 +4,15 @@ import { DynamoDBOrderRepository } from '../../infrastructure/repositories/Dynam
 import { ok, badRequest, notFound, internalError } from '../../shared/utils/response';
 import { createLogger } from '../../shared/utils/logger';
 import { ValidationError } from '../../shared/errors';
+import { requireAuth } from '../../shared/utils/auth';
 
 const logger = createLogger('DeleteOrderHandler');
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+
+  const user = requireAuth(event);
+  console.log('Creating order for user:', user.email);
+
   logger.info('DeleteOrder handler invoked', { requestId: event.requestContext.requestId });
 
   try {
@@ -26,7 +31,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const deleteOrderUseCase = new DeleteOrderUseCase(orderRepository);
 
     // 3. Execute use case
-    const result = await deleteOrderUseCase.execute({ orderId });
+    const result = await deleteOrderUseCase.execute({ orderId, user });
 
     logger.info('Order deleted successfully', { orderId });
 

@@ -7,7 +7,7 @@
     "// === BUILD COMMANDS ===": "",
     "build": "tsc",
     "build:watch": "tsc -w",
-    "clean": "rm -rf dist .aws-sam",
+    "clean": "rm -rf dist .aws-sam tsconfig.tsbuildinfo",
     "prebuild": "npm run clean",
     "rebuild": "npm run clean && npm run build",
     "// === LOCAL DEVELOPMENT ===": "",

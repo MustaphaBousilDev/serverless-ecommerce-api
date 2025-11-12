@@ -11,13 +11,8 @@ import { getUserFromEvent, requireAuth } from '../../shared/utils/auth';
 const logger = createLogger('CreateOrderHandler');
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-
-
-
   logger.info('CreateOrder handler invoked', { requestId: event.requestContext.requestId });
   
-
-
   try {
      const user = requireAuth(event);
      console.log('Creating order for user:', user.email);

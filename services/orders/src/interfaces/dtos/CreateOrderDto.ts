@@ -1,5 +1,4 @@
 export interface CreateOrderRequestDto {
-  userId: string;
   items: OrderItemDto[];
   shippingAddress: AddressDto;
 }

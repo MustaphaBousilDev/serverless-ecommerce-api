@@ -12,8 +12,13 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "types": ["node", "jest"],
-    "typeRoots": ["./node_modules/@types", "./src/types"]
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    
+    "incremental": false,           // ← Disable incremental compilation
+    "tsBuildInfoFile": null,        // ← Don't create cache file
+    "sourceMap": false,             // ← Don't need source maps in production
+    "removeComments": true          // ← Smaller bundle size
   },
-  "include": ["src/**/*"], 
-  "exclude": ["node_modules", "dist", ".aws-sam", "tests"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", ".aws-sam", "tests", "**/*.test.ts"]
 }

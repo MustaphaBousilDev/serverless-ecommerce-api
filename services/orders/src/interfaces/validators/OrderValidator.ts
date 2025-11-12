@@ -10,9 +10,7 @@ export class OrderValidator {
     static validateCreateOrder(data: any): ValidationResult {
     const errors: string[] = [];
 
-    if (!data.userId || typeof data.userId !== 'string' || data.userId.trim() === '') {
-      errors.push('userId is required and must be a non-empty string');
-    }
+    
 
     if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
       errors.push('items array is required and must contain at least one item');

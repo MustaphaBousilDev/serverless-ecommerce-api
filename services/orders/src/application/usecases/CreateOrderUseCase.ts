@@ -38,6 +38,7 @@ export class CreateOrderUseCase {
   ) {}
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
+    console.log("##============== INPUT", input)
     // 1. Validate input
     this.validateInput(input);
 

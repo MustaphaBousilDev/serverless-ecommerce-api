@@ -1,8 +1,10 @@
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { EventPublisher } from '../../infrastructure/events/EventPublisher';
+import { AuthenticatedUser } from '../../shared/utils/auth';
 export interface DeleteOrderInput {
   orderId: string;
+  user: AuthenticatedUser
 }
 
 export interface DeleteOrderOutput {
@@ -27,6 +29,9 @@ export class DeleteOrderUseCase {
 
     if (!order) {
       throw new Error('Order not found');
+    }
+    if(order.userId != input.user.email){
+      throw new Error(`You dont have access to deleting this order: ${order.orderId} , fo r this user: ${input.user.email}`)
     }
 
     if (order.status !== 'PENDING' && order.status !== 'CANCELLED') {

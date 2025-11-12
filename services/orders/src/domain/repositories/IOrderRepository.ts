@@ -1,5 +1,5 @@
 import { Order } from '../entities/Order';
-import { OrderId } from '../value-objects/OrderId';
+import { OrderId, UserId } from '../value-objects/OrderId';
 
 export interface IOrderRepository {
   save(order: Order): Promise<void>;
