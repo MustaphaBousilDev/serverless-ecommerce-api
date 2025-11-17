@@ -39,10 +39,10 @@ export class CreateOrderUseCase {
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
     console.log("##============== INPUT", input)
-    // 1. Validate input
+  
     this.validateInput(input);
 
-    // 2. Create domain objects
+    //Create domain objects
     const orderItems = input.items.map(
       (item) =>
         new OrderItem({
@@ -55,19 +55,18 @@ export class CreateOrderUseCase {
 
     const shippingAddress = new Address(input.shippingAddress);
 
-    // 3. Create order entity (business logic happens here)
+    //Create order entity (business logic happens here)
     const order = Order.create(input.userId, orderItems, shippingAddress);
 
-    // 4. Persist order
+
     await this.orderRepository.save(order);
 
     try {
-      await this.eventPublisher.publishOrderCreated(order);
+      await this.eventPublisher.publishOrderCreated(order.toEventData());
     } catch(error) {
       console.error('⚠️ Failed to publish OrderCreated event, but order was created:', error)
     }
 
-    // 5. Return output
     return {
       orderId: order.orderId.value,
       userId: order.userId,

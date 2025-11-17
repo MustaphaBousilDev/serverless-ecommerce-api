@@ -1,5 +1,5 @@
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { Order } from '../../domain/entities/Order';
+import { Order, OrderStatus } from '../../domain/entities/Order';
 
 export interface OrderEvent {
     source: string;
@@ -8,11 +8,11 @@ export interface OrderEvent {
 }
 
 export class EventPublisher {
-    private client: EventBridgeClient
+    private eventBridgeClient: EventBridgeClient
     private eventBusName: string
 
     constructor(){
-        this.client = new EventBridgeClient({
+        this.eventBridgeClient = new EventBridgeClient({
             region: process.env.AWS_REGION || 'us-east-1'
         })
         this.eventBusName = process.env.EVENT_BUS_NAME || 'dev-orders-event-bus';
@@ -22,53 +22,100 @@ export class EventPublisher {
         });
     }
 
-    async publishOrderCreated(order: Order): Promise<void>{
-       const event: OrderEvent = {
-        source: 'orders.service',
-        detailType: 'OrderCreated',
-        detail: {
-            orderId: order.orderId.value,
-            userId: order.userId,
-            status: order.status,
-            totalAmount: order.totalAmount,
-            items: order.items.map(item => ({
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-            })),
-            shippingAddress: {
-                street: order.shippingAddress.street,
-                city: order.shippingAddress.city,
-                state: order.shippingAddress.state,
-                country: order.shippingAddress.country,
-                zipCode: order.shippingAddress.zipCode,
-            },
-            createdAt: order.createdAt.toISOString(),
-            timestamp: new Date().toISOString(),
+    async publishOrderCreated(data: {
+    orderId: string;
+    userId: string;
+    totalAmount: number;
+    items: Array<{
+      productId: string;
+      productName: string;
+      quantity: number;
+      unitPrice: number;
+    }>;
+    shippingAddress: {
+      street: string;
+      city: string;
+      state: string;
+      country: string;
+      zipCode: string;
+    };
+    }): Promise<void> {
+        const event = {
+        DetailType: 'OrderCreated',
+        Source: 'orders.service',
+        Detail: JSON.stringify(data),
+        EventBusName: this.eventBusName,
+        };
+
+        try {
+        await this.eventBridgeClient.send(new PutEventsCommand({
+            Entries: [event],
+        }));
+        console.log('✅ OrderCreated event published:', data.orderId);
+        } catch (error) {
+        console.error('❌ Failed to publish OrderCreated event:', error);
+        throw error;
         }
-       }
-       await this.publishEvent(event);
-       console.log('✅ Published OrderCreated event:', order.orderId.value);
     }
 
-    async publishOrderStatusChanged(order: Order, oldStatus: string): Promise<void> {
-        const event: OrderEvent = {
-            source: 'orders.service',
-            detailType: 'OrderStatusChanged',
-            detail: {
-                orderId: order.orderId.value,
-                userId: order.userId,
-                oldStatus: oldStatus,
-                newStatus: order.status,
-                totalAmount: order.totalAmount,
-                updatedAt: order.updatedAt.toISOString(),
-                timestamp: new Date().toISOString(),
-            },
+    async publishOrderCancelled(data: {
+    orderId: string;
+    userId: string;
+    cancelledAt: string;
+    reason: string;
+    totalAmount: number;
+    items: Array<{
+      productId: string;
+      productName: string;
+      quantity: number;
+      unitPrice: number;
+    }>;
+    }): Promise<void> {
+        const event = {
+        DetailType: 'OrderCancelled',
+        Source: 'orders.service',
+        Detail: JSON.stringify(data),
+        EventBusName: this.eventBusName,
         };
-        await this.publishEvent(event);
-        console.log('✅ Published OrderStatusChanged event:', order.orderId.value);
+
+        try {
+        await this.eventBridgeClient.send(new PutEventsCommand({
+            Entries: [event],
+        }));
+        console.log('✅ OrderCancelled event published:', data.orderId);
+        } catch (error) {
+        console.error('❌ Failed to publish OrderCancelled event:', error);
+        throw error;
+        }
     }
+
+    async publishOrderStatusChanged(data: {
+    orderId: string;
+    userId: string;
+    oldStatus: OrderStatus;
+    newStatus: OrderStatus;
+    updatedAt: string;
+    totalAmount: number;
+    }): Promise<void> {
+        const event = {
+        DetailType: 'OrderStatusChanged',
+        Source: 'orders.service',
+        Detail: JSON.stringify(data),
+        EventBusName: this.eventBusName,
+        };
+
+        try {
+        await this.eventBridgeClient.send(new PutEventsCommand({
+            Entries: [event],
+        }));
+        console.log(`✅ OrderStatusChanged event published: ${data.orderId} (${data.oldStatus} → ${data.newStatus})`);
+        } catch (error) {
+        console.error('❌ Failed to publish OrderStatusChanged event:', error);
+        throw error;
+        }
+    }
+
+    
 
     async publishOrderDeleted(orderId: string, userId: string): Promise<void> {
         const event: OrderEvent = {
@@ -97,7 +144,7 @@ export class EventPublisher {
                     },
                 ],
             });
-            const response = await this.client.send(command);
+            const response = await this.eventBridgeClient.send(command);
             if (response.FailedEntryCount && response.FailedEntryCount > 0) {
                 console.error('❌ Failed to publish event:', response.Entries);
                 throw new Error('Failed to publish event to EventBridge');

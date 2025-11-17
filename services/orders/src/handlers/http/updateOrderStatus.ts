@@ -7,10 +7,10 @@ import { ValidationError } from '../../shared/errors';
 import { OrderStatus } from '../../domain/entities/Order';
 import { requireAuth } from '../../shared/utils/auth';
 
-const logger = createLogger('UpdateOrderStatusHandler');
+const logger = createLogger('UpdateOrderItemHandler');
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  logger.info('UpdateOrderStatus handler invoked', { requestId: event.requestContext.requestId });
+  logger.info('UpdateOrderItem handler invoked', { requestId: event.requestContext.requestId });
 
   try {
     const user = requireAuth(event);

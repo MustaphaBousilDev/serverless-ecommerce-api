@@ -4,6 +4,7 @@ import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { EventPublisher } from '../../infrastructure/events/EventPublisher';
 export interface UpdateOrderStatusInput {
   orderId: string;
+  
   status: OrderStatus;
 }
 
@@ -34,6 +35,9 @@ export class UpdateOrderStatusUseCase {
     if (!input.status) {
       throw new Error('status is required');
     }
+    if(!Object.values(OrderStatus).includes(input.status)){
+      throw new Error(`Invalid status: ${input.status}`);
+    }
 
 
     const orderId = new OrderId(input.orderId);
@@ -47,39 +51,54 @@ export class UpdateOrderStatusUseCase {
       throw  new Error('Forbidden - You can only access your own orders');
     }
 
-    
 
-    // store old status for event
     const oldStatus = order.status;
 
-
-    switch (input.status) {
-      case OrderStatus.CONFIRMED:
-        order.confirm();
-        break;
-      case OrderStatus.SHIPPED:
-        order.ship();
-        break;
-      case OrderStatus.DELIVERED:
-        order.deliver()
-        break;
-      case OrderStatus.CANCELLED:
-        order.cancel();
-        break;
-      default:
-        throw new Error(`Cannot update to status: ${input.status}`);
+    if (oldStatus === input.status) {
+      throw new Error(`Order is already in ${input.status} status`);
     }
 
-    // 4. Save updated order
+
+
+    try {
+      switch (input.status) {
+        case OrderStatus.CONFIRMED:
+          order.confirm();
+          break;
+        case OrderStatus.PROCESSING:
+          order.process();
+          break;
+        case OrderStatus.SHIPPED:
+          order.ship();
+          break;
+        case OrderStatus.DELIVERED:
+          order.deliver()
+          break;
+        case OrderStatus.CANCELLED:
+          order.cancel();
+          break;
+        default:
+          throw new Error(`Cannot update to status: ${input.status}`);
+      }
+    } catch(error:any) {
+      throw new Error(`Status update failed: ${error.message}`);
+    }
+
     await this.orderRepository.update(order);
 
     try {
-      await this.eventPublisher.publishOrderStatusChanged(order, oldStatus)
+      await this.eventPublisher.publishOrderStatusChanged({
+        orderId: order.orderId.value,
+        userId: order.userId,
+        oldStatus,
+        newStatus: order.status,
+        updatedAt: order.updatedAt.toISOString(),
+        totalAmount: order.totalAmount,
+      });
     } catch(error) {
       console.error('⚠️ Failed to publish OrderStatusChanged event:', error);
     }
 
-    // 5. Return output
     return {
       orderId: order.orderId.value,
       status: order.status,

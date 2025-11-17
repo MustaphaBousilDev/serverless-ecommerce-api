@@ -155,6 +155,44 @@ Resources:
             Path: /orders/{orderId}/status
             Method: PUT
 
+  UpdateOrderItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-update-order-items'
+      CodeUri: .
+      Handler: dist/handlers/http/updateOrderItems.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+      Events:
+        UpdateItemsApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref OrdersApi
+            Path: /orders/{orderId}/items
+            Method: PUT
+  CancelOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-cancel-order'
+      CodeUri: .
+      Handler: dist/handlers/http/cancelOrder.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${Environment}-ecommerce-events'
+      Events:
+        CancelOrderApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref OrdersApi
+            Path: /orders/{orderId}/cancel
+            Method: POST
+
   DeleteOrderFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -177,6 +215,8 @@ Resources:
             RestApiId: !Ref OrdersApi
             Path: /orders/{orderId}
             Method: DELETE
+  
+  
 
   CreateOrderLogGroup:
     Type: AWS::Logs::LogGroup

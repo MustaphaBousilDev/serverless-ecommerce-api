@@ -13,6 +13,20 @@ export class OrderItem {
     this.validate();
   }
 
+  static create(
+    productId: string,
+    productName: string,
+    quantity: number,
+    unitPrice: number
+  ): OrderItem{
+    return new OrderItem({
+      productId,
+      productName,
+      quantity,
+      unitPrice,
+    });
+  }
+
   private validate(): void {
     if (!this.props.productId) {
       throw new Error('Product ID is required');
@@ -34,6 +48,25 @@ export class OrderItem {
   getTotalPrice(): number {
     return this.props.quantity * this.props.unitPrice;
   }
+  withQuantity(newQuantity: number): OrderItem {
+    return new OrderItem({
+      ...this.props,
+      quantity: newQuantity,
+    });
+  }
+  withUnitPrice(newPrice: number): OrderItem {
+    return new OrderItem({
+      ...this.props,
+      unitPrice: newPrice,
+    });
+  }
+  isSameProduct(other: OrderItem): boolean {
+    return this.props.productId === other.props.productId;
+  }
+
+  
+
+
 
   // Getters
   get productId(): string {
@@ -60,6 +93,8 @@ export class OrderItem {
       unitPrice: this.props.unitPrice,
     };
   }
+
+  
 
   static fromObject(data: any): OrderItem {
     return new OrderItem({

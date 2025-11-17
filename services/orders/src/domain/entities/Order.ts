@@ -52,6 +52,17 @@ export class Order {
     });
   }
 
+  private canUpdateItems(): boolean {
+    return this.props.status === OrderStatus.PENDING;
+  }
+
+  private recalculateTotal(): void {
+    this.props.totalAmount = this.props.items.reduce(
+      (sum, item) => sum + item.getTotalPrice(),
+      0
+    );
+  }
+
   // Business logic: Validate order
   private validate(): void {
     if (!this.props.userId) {
@@ -105,6 +116,114 @@ export class Order {
     this.props.updatedAt = new Date();
   }
 
+  addItem(item: OrderItem): void {
+    if (!this.canUpdateItems()) {
+      throw new Error(`Cannot add items to order with status: ${this.props.status}`);
+    }
+    const existingItemIndex = this.props.items.findIndex(
+      i => i.productId === item.productId
+    )
+    if(existingItemIndex >= 0){
+      const existingItem = this.props.items[existingItemIndex]
+      const newQuantity = existingItem.quantity + item.quantity
+      this.props.items[existingItemIndex] = OrderItem.create(
+        existingItem.productId,
+        existingItem.productName,
+        newQuantity,
+        existingItem.unitPrice
+      );
+
+    } else {
+      this.props.items.push(item);
+    }
+    this.recalculateTotal();
+    this.props.updatedAt = new Date();
+  }
+
+  removeItem(productId: string): void {
+    if(!this.canUpdateItems()){
+      throw new Error(`Cannot remove items from order with status: ${this.props.status}`)
+    }
+    const initialLength = this.props.items.length
+    this.props.items = this.props.items.filter(item => item.productId !== productId)
+    if(this.props.items.length === initialLength){
+      throw new Error(`Item with productId ${productId} not found in order`);
+    }
+    if (this.props.items.length === 0) {
+      throw new Error('Cannot remove last item from order. Cancel the order instead.');
+    }
+    this.recalculateTotal();
+    this.props.updatedAt = new Date();
+  }
+
+  updateItemQuantity(productId: string, newQuantity: number) : void {
+    if (!this.canUpdateItems()) {
+      throw new Error(`Cannot update items in order with status: ${this.props.status}`);
+    }
+    if (newQuantity <= 0) {
+      throw new Error('Quantity must be greater than 0');
+    }
+    const itemIndex = this.props.items.findIndex(i => i.productId === productId);
+    if (itemIndex === -1) {
+      throw new Error(`Item with productId ${productId} not found in order`);
+    }
+    const item = this.props.items[itemIndex];
+    this.props.items[itemIndex] = OrderItem.create(
+      item.productId,
+      item.productName,
+      newQuantity,
+      item.unitPrice
+    );
+    this.recalculateTotal();
+    this.props.updatedAt = new Date();
+  }
+
+  process(): void {
+    if (this.props.status !== OrderStatus.CONFIRMED) {
+      throw new Error('Only confirmed orders can be processed');
+    }
+    this.props.status = OrderStatus.PROCESSING;
+    this.props.updatedAt = new Date();  
+  }
+  // Convert to event data format
+  toEventData(): {
+  orderId: string;
+  userId: string;
+  totalAmount: number;
+  items: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+} {
+  return {
+    orderId: this.props.orderId.value,
+    userId: this.props.userId,
+    totalAmount: this.props.totalAmount,
+    items: this.props.items.map(item => ({
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
+    shippingAddress: {
+      street: this.props.shippingAddress.street,
+      city: this.props.shippingAddress.city,
+      state: this.props.shippingAddress.state,
+      country: this.props.shippingAddress.country,
+      zipCode: this.props.shippingAddress.zipCode,
+    },
+  };
+}
+
   // Getters
   get orderId(): OrderId {
     return this.props.orderId;
@@ -115,7 +234,7 @@ export class Order {
   }
 
   get items(): OrderItem[] {
-    return [...this.props.items]; // Return copy to prevent mutation
+    return [...this.props.items]; 
   }
 
   get shippingAddress(): Address {
@@ -136,6 +255,31 @@ export class Order {
 
   get updatedAt(): Date {
     return this.props.updatedAt;
+  }
+
+  isPending(): boolean {
+    return this.props.status === OrderStatus.PENDING;
+  }
+
+  isConfirmed(): boolean {
+    return this.props.status === OrderStatus.CONFIRMED;
+  }
+
+  isShipped(): boolean {
+    return this.props.status === OrderStatus.SHIPPED;
+  }
+
+  isCancelled(): boolean {
+    return this.props.status === OrderStatus.CANCELLED;
+  }
+
+  isDelivered(): boolean {
+    return this.props.status === OrderStatus.DELIVERED;
+  }
+
+  canBeCancelled(): boolean {
+    return this.props.status === OrderStatus.PENDING || 
+           this.props.status === OrderStatus.CONFIRMED;
   }
 
   // Convert to plain object (for persistence)
