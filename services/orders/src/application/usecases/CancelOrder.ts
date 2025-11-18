@@ -1,7 +1,9 @@
-import { Order } from "../../domain/entities/Order";
+import { Order, OrderStatus } from "../../domain/entities/Order";
 import { IOrderRepository } from "../../domain/repositories/IOrderRepository";
+import { OrderHistory } from "../../domain/value-objects/OrderHistory";
 import { OrderId } from "../../domain/value-objects/OrderId";
 import { EventPublisher } from "../../infrastructure/events/EventPublisher";
+import { DynamoDBOrderHistoryRepository } from "../../infrastructure/repositories/DynamoDBOrderHistoryRepository";
 
 export interface CancelOrderRequest {
   orderId: string;
@@ -34,7 +36,18 @@ export class CancelOrder {
     order.cancel();
 
     // Save updated order
-    await this.orderRepository.update(order);
+    const newOrder = await this.orderRepository.update(order);
+
+    const orderHistoryRepo = new DynamoDBOrderHistoryRepository();
+    const historyEntry = OrderHistory.create(
+      order.orderId.value,
+      OrderStatus.CANCELLED,
+      request.userId,
+      'CANCELLED',
+      order.status,
+      request.reason
+    );
+    await orderHistoryRepo.save(historyEntry);
 
     // Publish OrderCancelled event
     await this.eventPublisher.publishOrderCancelled({

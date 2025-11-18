@@ -2,6 +2,8 @@ import { Order, OrderStatus } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { EventPublisher } from '../../infrastructure/events/EventPublisher';
+import { DynamoDBOrderHistoryRepository } from '../../infrastructure/repositories/DynamoDBOrderHistoryRepository';
+import { OrderHistory } from '../../domain/value-objects/OrderHistory';
 export interface UpdateOrderStatusInput {
   orderId: string;
   
@@ -85,6 +87,16 @@ export class UpdateOrderStatusUseCase {
     }
 
     await this.orderRepository.update(order);
+
+    const orderHistoryRepo = new DynamoDBOrderHistoryRepository();
+    const historyEntry = OrderHistory.create(
+      order.orderId.value,
+      order.status,
+      user.email,
+      'STATUS_CHANGED',
+      oldStatus
+    );
+    await orderHistoryRepo.save(historyEntry);
 
     try {
       await this.eventPublisher.publishOrderStatusChanged({

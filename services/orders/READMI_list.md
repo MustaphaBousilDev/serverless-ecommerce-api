@@ -7,21 +7,21 @@
 ----------------------------------------------------
 Add Missing CRUD Features
 -Update Order Items 
-===> PUT /orders/{orderId}/items
-** Add items to existing order
-** Remove items from order
-** Update item quantities
--Cancel Order
-===> POST /orders/{orderId}/cancel
-**Cancel order (change status to CANCELLED)
-**Publish OrderCancelled event
-**Prevent cancellation if already shipped
+===> PUT /orders/{orderId}/items (DONE)
+** Add items to existing order (DONE)
+** Remove items from order (DONE)
+** Update item quantities (DONE)
+-Cancel Order (DONE)
+===> POST /orders/{orderId}/cancel (DONE)
+**Cancel order (change status to CANCELLED) (DONE)
+**Publish OrderCancelled event (DONE)
+**Prevent cancellation if already shipped (DONE)
 
--Order History/Tracking
-===> GET /orders/{orderId}/history
-** Show status change history
-** Show who made changes
-** Show timestamps
+-Order History/Tracking (DONE)
+===> GET /orders/{orderId}/history (DONE)
+** Show status change history (DONE)
+** Show who made changes (DONE)
+** Show timestamps (DONE)
 
 Search & Filter Orders 
 ===> GET /orders?status=PENDING

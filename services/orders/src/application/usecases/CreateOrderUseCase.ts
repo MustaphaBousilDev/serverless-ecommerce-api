@@ -5,6 +5,8 @@ import { OrderItem } from '../../domain/entities/OrderItem';
 import { Address } from '../../domain/value-objects/Address';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { EventPublisher } from '../../infrastructure/events/EventPublisher'
+import { DynamoDBOrderHistoryRepository } from '../../infrastructure/repositories/DynamoDBOrderHistoryRepository';
+import { OrderHistory } from '../../domain/value-objects/OrderHistory';
 
 export interface CreateOrderInput {
   userId: string;
@@ -60,6 +62,15 @@ export class CreateOrderUseCase {
 
 
     await this.orderRepository.save(order);
+
+    const orderHistoryRepo = new DynamoDBOrderHistoryRepository()
+    const historyEntry = OrderHistory.create(
+      order.orderId.value,
+      order.status,
+      input.userId,
+      'CREATED'
+    )
+    await orderHistoryRepo.save(historyEntry);
 
     try {
       await this.eventPublisher.publishOrderCreated(order.toEventData());

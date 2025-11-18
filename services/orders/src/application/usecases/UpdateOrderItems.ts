@@ -4,6 +4,8 @@ import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { Order } from '../../domain/entities/Order';
 import { OrderItem } from '../../domain/entities/OrderItem';
+import { DynamoDBOrderHistoryRepository } from '../../infrastructure/repositories/DynamoDBOrderHistoryRepository';
+import { OrderHistory } from '../../domain/value-objects/OrderHistory';
 
 export interface UpdateOrderItemsRequest {
   orderId: string;
@@ -63,6 +65,18 @@ export class UpdateOrderItems {
 
 
     await this.orderRepository.update(order);
+    
+    const orderHistoryRepo = new DynamoDBOrderHistoryRepository();
+    const historyEntry = OrderHistory.create(
+      order.orderId.value,
+      order.status,
+      request.userId,
+      'ITEMS_UPDATED',
+      undefined,
+      undefined,
+      { action: request.action, productId: request.productId }
+    );
+    await orderHistoryRepo.save(historyEntry);
 
     return order;
   }

@@ -4,8 +4,9 @@ export const AWS_CONFIG = {
 }
 
 export const TABLE_NAMES = {
-    ORDERS: process.env.ORDERS_TABLE_NAME || 'dev-orders',
-    PRODUCTS: process.env.PRODUCTS_TABLE_NAME || 'dev-products'
+    ORDERS: process.env.ORDERS_TABLE_NAME ||  `${process.env.Environment}` || 'dev-orders',
+    PRODUCTS: process.env.PRODUCTS_TABLE_NAME || `${process.env.Environment}` || 'dev-products',
+    ORDER_HISTORY: process.env.ORDERS_HISTORY_TABLE_NAME || `${process.env.Environment}` || 'dev-order-history'
 }
 
 export const QUEUE_URLS = {

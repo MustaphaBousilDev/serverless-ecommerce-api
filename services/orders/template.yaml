@@ -75,6 +75,27 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+  OrderHistoryTable:
+    Type: AWS::DynamoDB::Table 
+    Properties:
+      TableName: !Sub '${Environment}-order-history'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: orders
+
   CreateOrderFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -216,6 +237,29 @@ Resources:
             Path: /orders/{orderId}
             Method: DELETE
   
+  GetOrderHistoryFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      FunctionName: !Sub '${Environment}-get-order-history'
+      CodeUri: .
+      Handler: dist/handlers/http/getOrderHistory.handler
+      Environment:
+        Variables:
+          ORDER_HISTORY_TABLE_NAME: !Ref OrderHistoryTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrdersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrderHistoryTable
+      Events:
+        GetHistoryApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref OrdersApi
+            Path: /orders/{orderId}/history
+            Method: GET
+
+  
   
 
   CreateOrderLogGroup:
@@ -257,6 +301,12 @@ Outputs:
   OrdersTableName:
     Description: DynamoDB Orders table name
     Value: !Ref OrdersTable
+
+  OrderHistoryTableName:
+    Description: Order History DynamoDB Table Name
+    Value: !Ref OrderHistoryTable
+    Export:
+      Name: !Sub '${Environment}-OrderHistoryTableName'
 
   UpdateOrderStatusFunctionArn:
     Description: Update Order Status Lambda Function ARN
