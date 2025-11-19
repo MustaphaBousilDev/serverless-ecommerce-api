@@ -1,3 +1,4 @@
+import { OrderItem } from '../../domain/entities/OrderItem';
 import { CreateOrderRequestDto } from '../dtos/CreateOrderDto';
 
 export interface ValidationResult {
@@ -6,6 +7,11 @@ export interface ValidationResult {
 }
 
 export class OrderValidator {
+
+  static readonly MIN_ORDER_AMOUNT = 10; // $10 
+  static readonly MAX_ORDER_AMOUNT = 10000; // $10,000 
+  static readonly MAX_ITEMS_PER_ORDER = 50;
+  static readonly MIN_ITEMS_PER_ORDER = 1;
 
     static validateCreateOrder(data: any): ValidationResult {
     const errors: string[] = [];
@@ -92,4 +98,59 @@ export class OrderValidator {
             errors,
         };
     }
+
+    static validateOrderTotal(items: OrderItem[], expectedTotal: number): void {
+      const calculatedTotal = items.reduce(
+        (sum, item) => sum + item.getTotalPrice(),0
+      )
+      //using small epsilon for floating point comparison
+      const epsilon = 0.01
+      const difference = Math.abs(calculatedTotal-expectedTotal)
+      if(difference > epsilon){
+        throw new Error(
+          `Order total mismatch. Expected: $${expectedTotal.toFixed(2)}, ` +
+          `Calculated: $${calculatedTotal.toFixed(2)}`
+        )
+      }
+    }
+
+    static validateMinimumAmount(totalAmount: number): void {
+      if(totalAmount < this.MIN_ORDER_AMOUNT){
+        throw new Error(
+          `Order total must be at least $${this.MIN_ORDER_AMOUNT}. ` +
+          `Current total: $${totalAmount.toFixed(2)}`
+        )
+      }
+    }
+
+    static validateMaximumAmount(totalAmount: number): void {
+      if (totalAmount > this.MAX_ORDER_AMOUNT) {
+        throw new Error(
+          `Order total cannot exceed $${this.MAX_ORDER_AMOUNT}. ` +
+          `Current total: $${totalAmount.toFixed(2)}`
+        );
+      }
+    }
+
+    static validateItemCount(items: OrderItem[]): void {
+      if (items.length < this.MIN_ITEMS_PER_ORDER) {
+        throw new Error(
+          `Order must have at least ${this.MIN_ITEMS_PER_ORDER} item(s)`
+        );
+      }
+      if (items.length > this.MAX_ITEMS_PER_ORDER) {
+        throw new Error(
+          `Order cannot have more than ${this.MAX_ITEMS_PER_ORDER} items. ` +
+          `Current count: ${items.length}`
+        );
+      }
+    }
+
+    static validateOrder(items: OrderItem[], totalAmount: number): void {
+      this.validateItemCount(items);
+      this.validateOrderTotal(items, totalAmount);
+      this.validateMinimumAmount(totalAmount);
+      this.validateMaximumAmount(totalAmount);
+    }
+
  }

@@ -4,6 +4,7 @@ import { TABLE_NAMES } from '../config/aws-config';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { Order } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
+import { ListOrdersFilters } from '../../application/usecases/ListOrdersUseCase';
 
 export class DynamoDBOrderRepository implements IOrderRepository {
     private tableName: string;
@@ -112,8 +113,53 @@ export class DynamoDBOrderRepository implements IOrderRepository {
         }
     }
 
+    async findByUserIdWithFilters(userId: string, filters: ListOrdersFilters): Promise<{ orders: Order[]; lastEvaluatedKey?: string; }> {
+        const params : any = {
+            TableName: this.tableName,
+            IndexName: 'UserOrdersIndex',
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId,
+            },
+            ScanIndexForward: filters.sortOrder === 'asc',
+            Limit: filters.limit || 20,
+        }
+        if(filters.status){
+            params.FilterExpression = '#status = :status'
+            params.ExpressionAttributeNames = {
+                '#status': 'status',
+            };
+            params.ExpressionAttributeValues[':status'] = filters.status;
+        }
+        if (filters.lastEvaluatedKey) {
+            try {
+                params.ExclusiveStartKey = JSON.parse(
+                    Buffer.from(filters.lastEvaluatedKey, 'base64').toString()
+                );
+            } catch (error) {
+                console.error('Invalid cursor:', error);
+            }
+        }
+        const command = new QueryCommand(params);
+        try {
+            const response = await dynamoDBDocumentClient.send(command);
+            const orders = response.Items
+                ? response.Items.map((item) => Order.fromObject(item))
+                : [];
+            const lastEvaluatedKey = response.LastEvaluatedKey
+                ? Buffer.from(JSON.stringify(response.LastEvaluatedKey)).toString('base64')
+                : undefined;
+            return { orders, lastEvaluatedKey };
+        } catch(error) {
+            console.error('Error querying orders from DynamoDB:', error);
+            throw new Error('Failed to query orders');
+        }
+    }
+
 
     private toDynamoDBItem(order: Order): any {
         return order.toObject();
     }
+
+
 }

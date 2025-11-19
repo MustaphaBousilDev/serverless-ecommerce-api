@@ -1,7 +1,7 @@
 import { OrderId } from '../value-objects/OrderId';
 import { OrderItem } from './OrderItem';
 import { Address } from '../value-objects/Address';
-
+import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 export enum OrderStatus {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
@@ -76,6 +76,7 @@ export class Order {
     if (this.props.totalAmount <= 0) {
       throw new Error('Total amount must be greater than zero');
     }
+    OrderValidator.validateOrder(this.props.items, this.props.totalAmount);
   }
 
   // Business logic: Confirm order
@@ -296,7 +297,7 @@ export class Order {
     };
   }
 
-  // Reconstruct from plain object (from database)
+  // Reconstruct from plain object (for database)
   static fromObject(data: any): Order {
     return new Order({
       orderId: new OrderId(data.orderId),
@@ -309,4 +310,5 @@ export class Order {
       updatedAt: new Date(data.updatedAt),
     });
   }
+
 }

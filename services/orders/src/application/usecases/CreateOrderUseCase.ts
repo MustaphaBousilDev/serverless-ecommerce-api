@@ -7,6 +7,7 @@ import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { EventPublisher } from '../../infrastructure/events/EventPublisher'
 import { DynamoDBOrderHistoryRepository } from '../../infrastructure/repositories/DynamoDBOrderHistoryRepository';
 import { OrderHistory } from '../../domain/value-objects/OrderHistory';
+import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 
 export interface CreateOrderInput {
   userId: string;
@@ -99,5 +100,20 @@ export class CreateOrderUseCase {
     if (!input.shippingAddress) {
       throw new Error('shippingAddress is required');
     }
+    OrderValidator.validateItemCount(
+      input.items.map(item => 
+        new OrderItem({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })
+      )
+    );
+    const calculatedTotal = input.items.reduce(
+      (sum, item) => sum + (item.quantity * item.unitPrice),0
+    )
+    OrderValidator.validateMinimumAmount(calculatedTotal);
+    OrderValidator.validateMaximumAmount(calculatedTotal);
   }
 }
