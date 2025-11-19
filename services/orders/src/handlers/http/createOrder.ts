@@ -7,6 +7,7 @@ import { created, badRequest, internalError, errorResponse } from '../../shared/
 import { createLogger } from '../../shared/utils/logger';
 import { ValidationError } from '../../shared/errors';
 import { getUserFromEvent, requireAuth } from '../../shared/utils/auth';
+import { checkIdempotency, storeIdempotentResponse } from '../../shared/utils/idempotency';
 
 const logger = createLogger('CreateOrderHandler');
 
@@ -15,6 +16,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   
   try {
      const user = requireAuth(event);
+     //check Idempotency
+     const idempotencyResult = await checkIdempotency(event, user.email);
+     if (idempotencyResult.isIdempotent) {
+      console.log('🔄 Returning cached response for idempotent request');
+      return idempotencyResult.existingResponse;
+     }
      console.log('Creating order for user:', user.email);
     if (!event.body) {
       logger.warn('Request body is empty');
@@ -44,8 +51,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     logger.info('Order created successfully', { orderId: result.orderId });
 
-    return created(result, 'Order created successfully');
+    
+    const response =  created(result, 'Order created successfully');
+    await storeIdempotentResponse(idempotencyResult.idempotencyKey, response);
+    return response
   } catch (error: any) {
+    if (error.message.includes('Unauthorized')) {
+      return errorResponse(401, error.message);
+    }
     if (error instanceof ValidationError) {
       logger.warn('Validation error', { error: error.message });
       return badRequest(error.message, error.validationErrors);

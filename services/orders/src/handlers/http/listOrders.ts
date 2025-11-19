@@ -58,7 +58,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             userId: user.email,
             filters
         });
-        logger.info('======= Orders retrieved successfully ====', { userId: user.email, count: result.count });
+        logger.info('======= Orders retrieved successfully ====', { userId: user.email, count: result.pagination.count });
         return ok(result, 'Orders retrieved successfully');
     } catch(error: any) {
         if (error instanceof ValidationError) {

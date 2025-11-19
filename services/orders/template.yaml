@@ -96,21 +96,48 @@ Resources:
         - Key: Service
           Value: orders
 
+  IdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-idempotency-keys'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: idempotencyKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: idempotencyKey
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiresAt # <- DynamoDB has a features called Time To Live that automatically deletes old items for you
+        Enabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: orders
+
+
+
   CreateOrderFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${Environment}-create-order'
       CodeUri: .
       Handler: dist/handlers/http/createOrder.handler
+      Environment:
+        Variables:
+          IDEMPOTENCY_TABLE_NAME: !Ref IdempotencyTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IdempotencyTable
         # Add Permission for this function to can send evenPublisher 
         - Statement:
             - Effect: Allow 
               Action:
                 - events:PutEvents
-              Resource: '*'
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${Environment}-ecommerce-events'
       Events:
         CreateOrderApi:
           Type: Api
@@ -315,3 +342,9 @@ Outputs:
   DeleteOrderFunctionArn:
     Description: Delete Order Lambda Function ARN
     Value: !GetAtt DeleteOrderFunction.Arn
+
+  IdempotencyTableName:
+    Description: Idempotency Keys Table Name
+    Value: !Ref IdempotencyTable
+    Export:
+      Name: !Sub '${Environment}-IdempotencyTableName'
