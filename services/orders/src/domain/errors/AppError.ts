@@ -14,7 +14,7 @@ export abstract class AppError extends Error {
     constructor(
         code: ErrorCode,
         message: string, 
-        details: ErrorDetails,
+        details?: ErrorDetails,
         isOperational: boolean = true 
     ){
         super(message)
