@@ -1,4 +1,5 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import { UnauthorizedError } from '../../domain/errors/DomainErrors';
 
 export interface AuthenticatedUser {
   email: string;
@@ -39,7 +40,7 @@ export function requireAuth(event: APIGatewayProxyEvent): AuthenticatedUser {
   
   
   if (!user) {
-    throw new Error('Unauthorized - Invalid or missing authentication token');
+    throw new UnauthorizedError('Missing authorization token');
   }
 
   return user;

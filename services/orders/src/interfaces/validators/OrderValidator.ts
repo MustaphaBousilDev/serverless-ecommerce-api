@@ -1,6 +1,11 @@
 import { OrderItem } from '../../domain/entities/OrderItem';
 import { CreateOrderRequestDto } from '../dtos/CreateOrderDto';
-
+import { 
+  OrderMinimumNotMetError,
+  OrderMaximumExceededError,
+  TooManyItemsError,
+  ValidationError
+} from '../../domain/errors/DomainErrors';
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -107,42 +112,38 @@ export class OrderValidator {
       const epsilon = 0.01
       const difference = Math.abs(calculatedTotal-expectedTotal)
       if(difference > epsilon){
-        throw new Error(
-          `Order total mismatch. Expected: $${expectedTotal.toFixed(2)}, ` +
-          `Calculated: $${calculatedTotal.toFixed(2)}`
-        )
+        throw new ValidationError(
+          'Order total mismatch',
+          {
+            expectedTotal,
+            calculatedTotal,
+            difference
+          }
+        );
       }
     }
 
     static validateMinimumAmount(totalAmount: number): void {
       if(totalAmount < this.MIN_ORDER_AMOUNT){
-        throw new Error(
-          `Order total must be at least $${this.MIN_ORDER_AMOUNT}. ` +
-          `Current total: $${totalAmount.toFixed(2)}`
-        )
+        throw new OrderMinimumNotMetError(totalAmount, this.MIN_ORDER_AMOUNT);
       }
     }
 
     static validateMaximumAmount(totalAmount: number): void {
       if (totalAmount > this.MAX_ORDER_AMOUNT) {
-        throw new Error(
-          `Order total cannot exceed $${this.MAX_ORDER_AMOUNT}. ` +
-          `Current total: $${totalAmount.toFixed(2)}`
-        );
+        throw new OrderMaximumExceededError(totalAmount, this.MAX_ORDER_AMOUNT);
       }
     }
 
     static validateItemCount(items: OrderItem[]): void {
       if (items.length < this.MIN_ITEMS_PER_ORDER) {
-        throw new Error(
-          `Order must have at least ${this.MIN_ITEMS_PER_ORDER} item(s)`
+        throw new ValidationError(
+          `Order must have at least ${this.MIN_ITEMS_PER_ORDER} item(s)`,
+          { itemCount: items.length, minimum: this.MIN_ITEMS_PER_ORDER }
         );
       }
       if (items.length > this.MAX_ITEMS_PER_ORDER) {
-        throw new Error(
-          `Order cannot have more than ${this.MAX_ITEMS_PER_ORDER} items. ` +
-          `Current count: ${items.length}`
-        );
+        throw new TooManyItemsError(items.length, this.MAX_ITEMS_PER_ORDER);
       }
     }
 

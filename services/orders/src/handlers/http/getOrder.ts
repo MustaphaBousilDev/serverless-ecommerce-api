@@ -6,10 +6,11 @@ import { ok, badRequest, notFound, internalError } from '../../shared/utils/resp
 import { createLogger } from '../../shared/utils/logger';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import { requireAuth } from '../../shared/utils/auth';
+import { withErrorHandling } from '../../shared/utils/errorHandler';
 
 const logger  = createLogger('GetOrderHandler')
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     logger.info('========== Get Order handler invoked : ', {
         requestId : event.requestContext.requestId
     })
@@ -52,3 +53,5 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         return internalError('Failed to retrieve order')
     }
 }
+
+export const handler = withErrorHandling(handlerLogic)

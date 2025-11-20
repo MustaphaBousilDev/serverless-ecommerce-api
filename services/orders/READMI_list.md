@@ -23,34 +23,34 @@ Add Missing CRUD Features
 ** Show who made changes (DONE)
 ** Show timestamps (DONE)
 
-Search & Filter Orders 
-===> GET /orders?status=PENDING
-GET /orders?fromDate=2024-01-01&toDate=2024-12-31
-GET /orders?minAmount=100&maxAmount=500
-GET /orders?sortBy=createdAt&sortOrder=desc
+Search & Filter Orders  (DONE)
+===> GET /orders?status=PENDING (DONE)
+GET /orders?fromDate=2024-01-01&toDate=2024-12-31 (DONE)
+GET /orders?minAmount=100&maxAmount=500 (DONE)
+GET /orders?sortBy=createdAt&sortOrder=desc (DONE)
 
 
 Business Logic Enhancements
-=>Validate order total matches items
-=>Validate minimum order amount
-=>Validate maximum items per order
-=> Validate shipping address format
+=>Validate order total matches items (DONE)
+=>Validate minimum order amount (DONE)
+=>Validate maximum items per order (DONE)
+=> Validate shipping address format (DONE)
 
 
 ==Order Status Workflow 
 PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED
-        ↘ CANCELLED
+        ↘ CANCELLED (DONE)
 Rules:
---> Can't ship if not confirmed
---> Can't deliver if not shipped
---> Can only cancel if PENDING or CONFIRMED
+--> Can't ship if not confirmed (DONE)
+--> Can't deliver if not shipped (DONE)
+--> Can only cancel if PENDING or CONFIRMED (DONE)
 
 ==> Idempotency
-- Prevent duplicate orders
-- Use idempotency key in headers
-- Store processed requests in DynamoDB
+- Prevent duplicate orders (DONE)
+- Use idempotency key in headers (DONE)
+- Store processed requests in DynamoDB (DONE)
 
-Error Handling & Resilience
+Error Handling & Resilience (DONE)
 ==> Retry Logic 
 **Exponential backoff for DynamoDB
 **Retry failed EventBridge publishes

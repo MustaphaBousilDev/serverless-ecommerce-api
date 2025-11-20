@@ -2,6 +2,14 @@ import { OrderId } from '../value-objects/OrderId';
 import { OrderItem } from './OrderItem';
 import { Address } from '../value-objects/Address';
 import { OrderValidator } from '../../interfaces/validators/OrderValidator';
+import {
+  CannotCancelShippedOrderError,
+  InvalidStatusTransitionError,
+  CannotUpdateItemsError,
+  ItemNotFoundInOrderError,
+  CannotRemoveLastItemError
+} from '../errors/DomainErrors'
+
 export enum OrderStatus {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
@@ -90,8 +98,12 @@ export class Order {
 
   // Business logic: Cancel order
   cancel(): void {
-    if (this.props.status === OrderStatus.DELIVERED) {
-      throw new Error('Cannot cancel delivered orders');
+    if (this.props.status === OrderStatus.SHIPPED || 
+      this.props.status === OrderStatus.DELIVERED) {
+      throw new CannotCancelShippedOrderError(
+        this.props.orderId.value,
+        this.props.status
+      );
     }
     if (this.props.status === OrderStatus.CANCELLED) {
       throw new Error('Order is already cancelled');
@@ -119,7 +131,10 @@ export class Order {
 
   addItem(item: OrderItem): void {
     if (!this.canUpdateItems()) {
-      throw new Error(`Cannot add items to order with status: ${this.props.status}`);
+      throw new CannotUpdateItemsError(
+      this.props.orderId.value,
+      this.props.status
+    );
     }
     const existingItemIndex = this.props.items.findIndex(
       i => i.productId === item.productId
@@ -143,15 +158,21 @@ export class Order {
 
   removeItem(productId: string): void {
     if(!this.canUpdateItems()){
-      throw new Error(`Cannot remove items from order with status: ${this.props.status}`)
+      throw new CannotUpdateItemsError(
+        this.props.orderId.value,
+        this.props.status
+      );
     }
     const initialLength = this.props.items.length
     this.props.items = this.props.items.filter(item => item.productId !== productId)
     if(this.props.items.length === initialLength){
-      throw new Error(`Item with productId ${productId} not found in order`);
+      throw new ItemNotFoundInOrderError(
+        this.props.orderId.value,
+        productId
+      );
     }
     if (this.props.items.length === 0) {
-      throw new Error('Cannot remove last item from order. Cancel the order instead.');
+      throw new CannotRemoveLastItemError(this.props.orderId.value);
     }
     this.recalculateTotal();
     this.props.updatedAt = new Date();
@@ -159,14 +180,20 @@ export class Order {
 
   updateItemQuantity(productId: string, newQuantity: number) : void {
     if (!this.canUpdateItems()) {
-      throw new Error(`Cannot update items in order with status: ${this.props.status}`);
+      throw new CannotUpdateItemsError(
+        this.props.orderId.value,
+        this.props.status
+      );
     }
     if (newQuantity <= 0) {
       throw new Error('Quantity must be greater than 0');
     }
     const itemIndex = this.props.items.findIndex(i => i.productId === productId);
     if (itemIndex === -1) {
-      throw new Error(`Item with productId ${productId} not found in order`);
+      throw new ItemNotFoundInOrderError(
+        this.props.orderId.value,
+        productId
+      );
     }
     const item = this.props.items[itemIndex];
     this.props.items[itemIndex] = OrderItem.create(

@@ -4,6 +4,7 @@ import { Order } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { errorResponse } from '../../shared';
+import { ForbiddenError } from '../../domain/errors/DomainErrors';
 
 export interface GetOrderInput {
   orderId: string;
@@ -53,7 +54,10 @@ export class GetOrderUseCase {
     const order = await this.orderRepository.findById(orderId);
 
     if (order?.userId !== user.email) {
-      throw  new Error('Forbidden - You can only access your own orders');
+      throw new ForbiddenError(
+        'You do not have permission to access this order',
+        { orderId: order?.userId, userId: user.email }
+      );
     }
 
     // 3. Check if order exists
