@@ -1,5 +1,6 @@
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Order, OrderStatus } from '../../domain/entities/Order';
+import { createLogger } from '../../shared';
 
 export interface OrderEvent {
     source: string;
@@ -10,8 +11,10 @@ export interface OrderEvent {
 export class EventPublisher {
     private eventBridgeClient: EventBridgeClient
     private eventBusName: string
+    private correlationId: string;
+    private logger: any;
 
-    constructor(){
+    constructor(correlationId?: string){
         this.eventBridgeClient = new EventBridgeClient({
             region: process.env.AWS_REGION || 'us-east-1'
         })
@@ -20,6 +23,8 @@ export class EventPublisher {
             region: process.env.AWS_REGION || 'us-east-1',
             eventBusName: this.eventBusName
         });
+        this.correlationId = correlationId || 'no-correlation-id';
+        this.logger = createLogger(this.correlationId);
     }
 
     async publishOrderCreated(data: {
@@ -43,18 +48,25 @@ export class EventPublisher {
         const event = {
         DetailType: 'OrderCreated',
         Source: 'orders.service',
-        Detail: JSON.stringify(data),
+        Detail: JSON.stringify({
+            ...data,
+            correlationId: this.correlationId,
+            timestamp: new Date().toISOString(),
+        }),
         EventBusName: this.eventBusName,
         };
 
         try {
-        await this.eventBridgeClient.send(new PutEventsCommand({
-            Entries: [event],
-        }));
-        console.log('✅ OrderCreated event published:', data.orderId);
+            await this.eventBridgeClient.send(new PutEventsCommand({
+                Entries: [event],
+            }));
+            this.logger.info('✅ OrderCreated event published', {
+                orderId: data.orderId,
+                eventBus: this.eventBusName,
+            });
         } catch (error) {
-        console.error('❌ Failed to publish OrderCreated event:', error);
-        throw error;
+            console.error('❌ Failed to publish OrderCreated event:', error);
+            throw error;
         }
     }
 
@@ -74,7 +86,11 @@ export class EventPublisher {
         const event = {
         DetailType: 'OrderCancelled',
         Source: 'orders.service',
-        Detail: JSON.stringify(data),
+        Detail: JSON.stringify({
+            ...data,
+            correlationId: this.correlationId,
+            timestamp: new Date().toISOString(),
+        }),
         EventBusName: this.eventBusName,
         };
 
@@ -82,10 +98,15 @@ export class EventPublisher {
         await this.eventBridgeClient.send(new PutEventsCommand({
             Entries: [event],
         }));
-        console.log('✅ OrderCancelled event published:', data.orderId);
+        this.logger.info('OrderCancelled event published', {
+            orderId: data.orderId,
+            reason: data.reason,
+        });
         } catch (error) {
-        console.error('❌ Failed to publish OrderCancelled event:', error);
-        throw error;
+            this.logger.error('Failed to publish OrderCancelled event', error, {
+                orderId: data.orderId,
+            });
+            throw error;
         }
     }
 
@@ -100,18 +121,28 @@ export class EventPublisher {
         const event = {
         DetailType: 'OrderStatusChanged',
         Source: 'orders.service',
-        Detail: JSON.stringify(data),
+        Detail: JSON.stringify({
+            ...data,
+            correlationId: this.correlationId,
+            timestamp: new Date().toISOString(),
+        }),
         EventBusName: this.eventBusName,
         };
 
         try {
-        await this.eventBridgeClient.send(new PutEventsCommand({
-            Entries: [event],
-        }));
-        console.log(`✅ OrderStatusChanged event published: ${data.orderId} (${data.oldStatus} → ${data.newStatus})`);
+            await this.eventBridgeClient.send(new PutEventsCommand({
+                Entries: [event],
+            }));
+            this.logger.info('OrderStatusChanged event published', {
+                orderId: data.orderId,
+                oldStatus: data.oldStatus,
+                newStatus: data.newStatus,
+            });
         } catch (error) {
-        console.error('❌ Failed to publish OrderStatusChanged event:', error);
-        throw error;
+            this.logger.error('Failed to publish OrderStatusChanged event', error, {
+                orderId: data.orderId,
+            });
+            throw error;
         }
     }
 

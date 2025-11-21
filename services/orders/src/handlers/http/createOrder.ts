@@ -4,29 +4,45 @@ import { DynamoDBOrderRepository } from '../../infrastructure/repositories/Dynam
 import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 import { CreateOrderRequestDto } from '../../interfaces/dtos/CreateOrderDto';
 import { created, badRequest, internalError, errorResponse } from '../../shared/utils/response';
-import { createLogger } from '../../shared/utils/logger';
+
 import { ValidationError } from '../../shared/errors';
 import { getUserFromEvent, requireAuth } from '../../shared/utils/auth';
 import { checkIdempotency, storeIdempotentResponse } from '../../shared/utils/idempotency';
+import { createLogger } from '../../shared/utils/logger';
+import { withErrorHandling } from '../../shared/utils/errorHandler';
+import { getCorrelationId } from '../../shared/utils/correlationId';
 
-const logger = createLogger('CreateOrderHandler');
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  logger.info('CreateOrder handler invoked', { requestId: event.requestContext.requestId });
+
+export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const correlationId = getCorrelationId(event);
+  const logger = createLogger(correlationId);
+  logger.info('CreateOrder request received', {
+    path: event.path,
+    method: event.httpMethod
+  })
   
   try {
      const user = requireAuth(event);
-     //check Idempotency
+     logger.addContext({ userId: user.email });
      const idempotencyResult = await checkIdempotency(event, user.email);
      if (idempotencyResult.isIdempotent) {
-      console.log('🔄 Returning cached response for idempotent request');
+      logger.info('Returning Cached response (idempotent request)' , {
+        idempotencyKey: idempotencyResult.idempotencyKey
+      })
       return idempotencyResult.existingResponse;
      }
-     console.log('Creating order for user:', user.email);
+     const body = JSON.parse(event.body || '{}');
+     
     if (!event.body) {
       logger.warn('Request body is empty');
       return badRequest('Request body is required');
     }
+    
+    logger.info('Creating order', {
+      itemCount: body.items?.length,
+      idempotencyKey: idempotencyResult.idempotencyKey,
+    });
 
     const requestBody: CreateOrderRequestDto = JSON.parse(event.body);
     logger.debug('Parsed request body', { userId: user.email });
@@ -39,7 +55,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const orderRepository = new DynamoDBOrderRepository();
-    const createOrderUseCase = new CreateOrderUseCase(orderRepository);
+    const createOrderUseCase = new CreateOrderUseCase(orderRepository,correlationId);
 
     logger.info('Creating order', { userId: user.email, itemCount: requestBody.items.length });
     
@@ -69,3 +85,4 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   }
 };
 
+export const handler = withErrorHandling(handlerLogic)

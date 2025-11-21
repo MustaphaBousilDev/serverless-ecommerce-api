@@ -11,6 +11,7 @@ import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 
 export interface CreateOrderInput {
   userId: string;
+  correlationId:string;
   items: Array<{
     productId: string;
     productName: string;
@@ -37,7 +38,8 @@ export interface CreateOrderOutput {
 export class CreateOrderUseCase {
   constructor(
     private orderRepository: IOrderRepository,
-    private eventPublisher: EventPublisher  = new EventPublisher()
+    private correlationId: string,
+    private eventPublisher: EventPublisher  = new EventPublisher(correlationId)
   ) {}
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
