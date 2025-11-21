@@ -11,7 +11,7 @@ import { OrderValidator } from '../../interfaces/validators/OrderValidator';
 
 export interface CreateOrderInput {
   userId: string;
-  correlationId:string;
+
   items: Array<{
     productId: string;
     productName: string;

@@ -1,5 +1,7 @@
 import { SQSEvent, SQSHandler } from 'aws-lambda';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { createLogger } from '../utils/logger'
+
 
 const sesClient = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const FROM_EMAIL = process.env.FROM_EMAIL || 'bousilmustapha@gmail.com';
@@ -37,13 +39,21 @@ interface OrderStatusChangedEvent {
 }
 
 export const handler: SQSHandler = async (event: SQSEvent): Promise<void> => {
-    console.log('==== Email Notifier triggered with', event.Records.length, 'messages');
     for(const record of event.Records){
        try {
           const eventBridgeEvent = JSON.parse(record.body);
+          const eventDetail = JSON.parse(eventBridgeEvent.detail || eventBridgeEvent.Detail); 
           const eventType = eventBridgeEvent['detail-type'];
 
-          console.log('📨 Processing event type:', eventType);
+          const correlationId = eventDetail.correlationId || 'no-correlation-id';
+          const logger = createLogger(correlationId, {
+            orderId: eventDetail.orderId,
+            userId: eventDetail.userId,
+          });
+          logger.info('Processing OrderCreated event for email', {
+            orderId: eventDetail.orderId,
+            sqsMessageId: record.messageId,
+          });
 
           if (eventType === 'OrderCreated') {
             await handleOrderCreated(eventBridgeEvent.detail);

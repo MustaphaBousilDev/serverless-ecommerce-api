@@ -14,8 +14,8 @@ export class OrderApplicationService {
   private getOrderUseCase: GetOrderUseCase;
   private listOrdersUseCase: ListOrdersUseCase;
 
-  constructor(orderRepository: IOrderRepository) {
-    this.createOrderUseCase = new CreateOrderUseCase(orderRepository);
+  constructor(orderRepository: IOrderRepository, correlationId: string) {
+    this.createOrderUseCase = new CreateOrderUseCase(orderRepository, correlationId);
     this.getOrderUseCase = new GetOrderUseCase(orderRepository);
     this.listOrdersUseCase = new ListOrdersUseCase(orderRepository);
   }
