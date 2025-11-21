@@ -5,53 +5,61 @@ export enum LogLevel {
   ERROR = 'ERROR',
 }
 
-export class Logger {
-  private context: string;
+export interface LogContext {
+  correlationId: string;
+  requestId?: string;
+  userId?: string;
+  orderId?: string;
+  [key: string]: any;
+}
 
-  constructor(context: string) {
+export class Logger {
+  private context: LogContext;
+
+  constructor(context: LogContext) {
     this.context = context;
   }
 
-  private log(level: LogLevel, message: string, data?: any): void {
-    const timestamp = new Date().toISOString();
+  private log(level: LogLevel, message: string, data?: Record<string, any>) {
     const logEntry = {
-      timestamp,
+      timestamp: new Date().toISOString(),
       level,
-      context: this.context,
       message,
-      ...(data && { data }),
+      ...this.context,
+      correlationId: this.context.correlationId,
+      ...data,
     };
-
- 
     console.log(JSON.stringify(logEntry));
   }
 
-  debug(message: string, data?: any): void {
+  debug(message: string, data?: Record<string, any>) {
     this.log(LogLevel.DEBUG, message, data);
   }
 
-  info(message: string, data?: any): void {
+  info(message: string, data?: Record<string, any>) {
     this.log(LogLevel.INFO, message, data);
   }
 
-  warn(message: string, data?: any): void {
+  warn(message: string, data?: Record<string, any>) {
     this.log(LogLevel.WARN, message, data);
   }
 
-  error(message: string, error?: Error | any): void {
-    const errorData = error instanceof Error
-      ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        }
-      : error;
+  error(message: string, error?: Error | any, data?: Record<string, any>) {
+    this.log(LogLevel.ERROR, message, {
+      error: error?.message,
+      stack: error?.stack,
+      ...data,
+    });
+  }
 
-    this.log(LogLevel.ERROR, message, errorData);
+  addContext(context: Partial<LogContext>) {
+    this.context = { ...this.context, ...context };
   }
 }
 
-//helper for create logger instance
-export const createLogger = (context: string): Logger => {
-  return new Logger(context);
-};
+export function createLogger(correlationId: string, additionalContext?: Partial<LogContext>): Logger {
+  return new Logger({
+    correlationId,
+    ...additionalContext,
+  });
+}

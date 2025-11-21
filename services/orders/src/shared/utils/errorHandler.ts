@@ -1,6 +1,8 @@
 import { ErrorCode } from '../../domain/errors/ErrorCodes'
 import { AppError } from '../../domain/errors/AppError'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import {createLogger } from './logger'
+import { addCorrelationIdToHeaders, getCorrelationId } from './correlationId';
 
 export interface ErrorResponse {
   success: false;
@@ -9,6 +11,7 @@ export interface ErrorResponse {
     message: string;
     timestamp: string;
     requestId: string;
+    correlationId?: string;
     path: string;
     details?: Record<string, any>;
     stack?: string;
@@ -19,17 +22,16 @@ export function handleError(
     error: Error | AppError,
     event: APIGatewayProxyEvent
 ): APIGatewayProxyResult{
+    const correlationId = getCorrelationId(event);
+    
     const requestId = event.requestContext?.requestId || 'unknown';
     const path = event.path;
     const isDevelopment = process.env.NODE_ENV === 'development';
-
-    console.error('❌ Error occurred:', {
-        error: error.message,
-        stack: error.stack,
-        requestId,
-        path,
-        timestamp: new Date().toISOString(),
-    })
+    const logger = createLogger(correlationId, { requestId, path });
+    logger.error('Request failed', error, {
+        statusCode: error instanceof AppError ? error.statusCode : 500,
+        code: error instanceof AppError ? error.code : 'INTERNAL_SERVER_ERROR',
+    });
     // Handle known application errors
     if (error instanceof AppError) {
         const errorResponse: ErrorResponse = {
@@ -39,6 +41,7 @@ export function handleError(
             message: error.message,
             timestamp: error.timestamp,
             requestId,
+            correlationId,
             path,
             details: error.details,
             ...(isDevelopment && { stack: error.stack }),
@@ -49,7 +52,7 @@ export function handleError(
             statusCode: error.statusCode,
             headers: {
                 'Content-Type': 'application/json',
-                'X-Request-Id': requestId,
+                ...addCorrelationIdToHeaders(correlationId),
             },
             body: JSON.stringify(errorResponse),
         };
@@ -62,6 +65,7 @@ export function handleError(
             message: isDevelopment ? error.message : 'An unexpected error occurred',
             timestamp: new Date().toISOString(),
             requestId,
+            correlationId, 
             path,
             ...(isDevelopment && { stack: error.stack }),
         },
@@ -71,7 +75,7 @@ export function handleError(
         statusCode: 500,
         headers: {
             'Content-Type': 'application/json',
-            'X-Request-Id': requestId,
+            ...addCorrelationIdToHeaders(correlationId),
         },
         body: JSON.stringify(errorResponse),
     }
