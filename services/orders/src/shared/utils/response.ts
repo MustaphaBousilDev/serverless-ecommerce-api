@@ -1,5 +1,5 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
-
+import { addCorrelationIdToHeaders } from './correlationId';
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -95,12 +95,13 @@ export const ok = <T>(data: T, message: string = 'Success'): APIGatewayProxyResu
   return success(200, data, message);
 };
 
-export const successResponse = (statusCode: number, data: any) => ({
+export const successResponse = (statusCode: number, data: any, correlationId?: string) => ({
     statusCode,
     headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Credentials': true,
+        ...(correlationId && addCorrelationIdToHeaders(correlationId)),
     },
     body: JSON.stringify({
         success: true,
