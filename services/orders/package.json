@@ -99,6 +99,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.936.0",
     "@aws-sdk/client-dynamodb": "^3.490.0",
     "@aws-sdk/client-eventbridge": "^3.490.0",
     "@aws-sdk/client-s3": "^3.490.0",

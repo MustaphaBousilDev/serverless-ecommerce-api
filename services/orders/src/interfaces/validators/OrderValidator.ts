@@ -6,6 +6,7 @@ import {
   TooManyItemsError,
   ValidationError
 } from '../../domain/errors/DomainErrors';
+import { MetricsPublisher } from '../../shared/utils/metrics';
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];

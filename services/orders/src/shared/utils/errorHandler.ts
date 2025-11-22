@@ -3,6 +3,7 @@ import { AppError } from '../../domain/errors/AppError'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import {createLogger } from './logger'
 import { addCorrelationIdToHeaders, getCorrelationId } from './correlationId';
+import { MetricsPublisher, MetricName } from './metrics';
 
 export interface ErrorResponse {
   success: false;
@@ -28,12 +29,18 @@ export function handleError(
     const path = event.path;
     const isDevelopment = process.env.NODE_ENV === 'development';
     const logger = createLogger(correlationId, { requestId, path });
+    const metrics = new MetricsPublisher();
     logger.error('Request failed', error, {
         statusCode: error instanceof AppError ? error.statusCode : 500,
         code: error instanceof AppError ? error.code : 'INTERNAL_SERVER_ERROR',
     });
     // Handle known application errors
     if (error instanceof AppError) {
+        if(error.code.includes('VALIDATION')){
+            metrics.publishError(MetricName.VALIDATION_ERROR, error.code);
+        } else if(error.code.includes('DATABASE')){
+            metrics.publishError(MetricName.DATABASE_ERROR, error.code);
+        }
         const errorResponse: ErrorResponse = {
         success: false,
         error: {

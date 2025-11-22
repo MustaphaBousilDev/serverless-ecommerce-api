@@ -12,11 +12,14 @@ import { createLogger } from '../../shared/utils/logger';
 import { withErrorHandling } from '../../shared/utils/errorHandler';
 import { getCorrelationId } from '../../shared/utils/correlationId';
 
+import { MetricsPublisher, MetricName } from '../../shared/utils/metrics';
+
 
 
 export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const correlationId = getCorrelationId(event);
   const logger = createLogger(correlationId);
+  const metrics = new MetricsPublisher()
   logger.info('CreateOrder request received', {
     path: event.path,
     method: event.httpMethod
@@ -50,6 +53,7 @@ export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGate
 
     const validation = OrderValidator.validateCreateOrder(requestBody);
     if (!validation.isValid) {
+      await metrics.publishError(MetricName.VALIDATION_ERROR, 'MISSING_REQUIRED_FIELDS')
       logger.warn('Validation failed', { errors: validation.errors });
       return badRequest('Validation failed', validation.errors);
     }
@@ -65,9 +69,17 @@ export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGate
       shippingAddress: requestBody.shippingAddress,
     });
 
-    logger.info('Order created successfully', { orderId: result.orderId });
+    await metrics.publishOrderCreated(
+      result.totalAmount,
+      body.items.length,
+      user.email
+    )
 
-    
+    logger.info('Order created successfully', { 
+      orderId: result.orderId,
+      totalAmount: result.totalAmount,
+    });
+
     const response =  created(result, 'Order created successfully');
     await storeIdempotentResponse(idempotencyResult.idempotencyKey, response);
     return response
