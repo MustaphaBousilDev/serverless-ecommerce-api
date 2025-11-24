@@ -74,7 +74,7 @@ Better Error Responses
 Performance & Optimization 
 ==> Cache frequently accessed orders
 ==> Use API Gateway caching for GET requests
-==> Add Cache-Control headers
+==> Add Cache-Control headers 
 
 Optimize DynamoDB Queries 
 ===> Use batch operations
