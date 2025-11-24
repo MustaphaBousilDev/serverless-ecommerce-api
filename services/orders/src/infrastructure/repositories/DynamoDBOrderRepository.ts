@@ -5,7 +5,9 @@ import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { Order } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { ListOrdersFilters } from '../../application/usecases/ListOrdersUseCase';
-
+import { createLogger } from '../../shared/utils/logger';
+import { retry } from '../../shared/utils/retry';
+import { DatabaseError } from '../../domain/errors/DomainErrors';
 export class DynamoDBOrderRepository implements IOrderRepository {
     private tableName: string;
 
@@ -13,21 +15,37 @@ export class DynamoDBOrderRepository implements IOrderRepository {
         this.tableName = TABLE_NAMES.ORDERS
     }
 
-    async save(order: Order): Promise<void> {
+    async save(order: Order,correlationId?: string): Promise<void> {
+        const logger = createLogger(correlationId || 'no-correlation-id');
         const item = this.toDynamoDBItem(order)
         const command = new PutCommand({
             TableName: this.tableName,
             Item: item,
         })
         try {
-            await dynamoDBDocumentClient.send(command)
+            await retry(
+                async ()=> {
+                    logger.info('Saving order to DynamoDB', { orderId: order.orderId.value });
+                    return await dynamoDBDocumentClient.send(command);
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 100,
+                    jitter: true,
+                },
+                correlationId || 'no-correlation-id'
+            )
+            logger.info('Order saved successfully', { orderId: order.orderId.value });
         } catch(error) {
-            console.error('Error saving order to DynamoDB: ', error)
-            throw new Error('Failed to save order')
+            logger.error('Failed to save order after retries', error, { 
+                orderId: order.orderId.value 
+            });
+            throw new DatabaseError('Failed to save order', { orderId: order.orderId.value });
         }
     }
 
-    async findById(orderId: OrderId): Promise<Order | null> {
+    async findById(orderId: OrderId,correlationId?: string): Promise<Order | null> {
+        const logger = createLogger(correlationId || 'no-correlation-id');
         const command  = new GetCommand({
             TableName: this.tableName,
             Key: {
@@ -35,18 +53,33 @@ export class DynamoDBOrderRepository implements IOrderRepository {
             }
         })
         try {
-            const response = await dynamoDBDocumentClient.send(command)
+            const response = await retry(
+                async ()=> {
+                    logger.info('Getting order from DynamoDB', { orderId: orderId.value });
+                    return await dynamoDBDocumentClient.send(command);
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 100,
+                    jitter: true,
+                },
+                correlationId || 'no-correlation-id'
+            )
             if(!response.Item){
+                logger.info('Order not found', { orderId: orderId.value });
                 return null;
             }
             return Order.fromObject(response.Item)
         } catch(error) {
-            console.error('Error getting order Item From DynamoDB: ', error)
-            throw new Error('Failed to get order')
+            logger.error('Failed to get order after retries', error, { 
+                orderId: orderId.value 
+            });
+            throw new DatabaseError('Failed to get order', { orderId: orderId.value });
         }
     }
 
-    async findByUserId(userId: string): Promise<Order[]> {
+    async findByUserId(userId: string,correlationId?: string): Promise<Order[]> {
+        const logger = createLogger(correlationId || 'no-correlation-id');
         const command = new QueryCommand({
             TableName: this.tableName,
             IndexName: 'UserOrdersIndex', // GSI name from CloudFormation
@@ -58,18 +91,32 @@ export class DynamoDBOrderRepository implements IOrderRepository {
         })
 
         try {
-            const response = await dynamoDBDocumentClient.send(command)
+            const response = await retry(
+                async ()=> {
+                    logger.info('Getting orders List from DynamoDB', { userId: userId });
+                    return await dynamoDBDocumentClient.send(command);
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 100,
+                    jitter: true,
+                },
+                correlationId || 'no-correlation-id'
+            )
             if (!response.Items || response.Items.length === 0) {
                 return []
             }
             return response.Items.map((item) => Order.fromObject(item))
         } catch(error) {
-            console.error('Error querying orders from DynamoDB: ', error)
-            throw new Error('Failed to query orders')
+            logger.error('Error querying orders from DynamoDB: ', error, { 
+                userId: userId 
+            });
+            throw new DatabaseError('Failed to query orders', {userId: userId})
         }
     }
 
-    async update(order: Order): Promise<void> {
+    async update(order: Order,correlationId?: string): Promise<void> {
+        const logger = createLogger(correlationId || 'no-correlation-id');
         const item = this.toDynamoDBItem(order)
         const command = new UpdateCommand({
             TableName: this.tableName,
@@ -91,14 +138,28 @@ export class DynamoDBOrderRepository implements IOrderRepository {
             }
         })
         try {
-            await dynamoDBDocumentClient.send(command);
+            await retry(
+                async ()=> {
+                    logger.info('Updating Order in DynamoDB', { order: order });
+                    await dynamoDBDocumentClient.send(command);
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 100,
+                    jitter: true,
+                },
+                correlationId || 'no-correlation-id'
+            )
         } catch(error) {
-            console.error('Error updating order in DynamoDB:', error);
-            throw new Error('Failed to update order');
+            logger.error('Error updating order in DynamoDB: ', error, { 
+                order: order
+            });
+            throw new DatabaseError('Failed to update order', {order: order})
         }
     }
 
-    async delete(orderId: OrderId): Promise<void> {
+    async delete(orderId: OrderId,correlationId?: string): Promise<void> {
+        const logger = createLogger(correlationId || 'no-correlation-id');
         const command = new DeleteCommand({
             TableName: this.tableName,
             Key: {
@@ -106,10 +167,23 @@ export class DynamoDBOrderRepository implements IOrderRepository {
             }
         })
         try {
-            await dynamoDBDocumentClient.send(command);
+            await retry(
+                async ()=> {
+                    logger.info('Deleting Order in DynamoDB', { orderId: orderId });
+                    await dynamoDBDocumentClient.send(command);
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 100,
+                    jitter: true,
+                },
+                correlationId || 'no-correlation-id'
+            )
         } catch(error) {
-            console.error('Error Deleting order from DynamoDB:', error)
-            throw new Error('Failed to delete order');
+            logger.error('Error Deleting order from DynamoDB: ', error, { 
+                orderId: orderId
+            });
+            throw new DatabaseError('Failed to Deleting order', {orderId: orderId})
         }
     }
 
