@@ -126,18 +126,24 @@ Resources:
       Handler: dist/handlers/http/createOrder.handler
       Environment:
         Variables:
+          ORDERS_TABLE_NAME: !Ref OrdersTable
           IDEMPOTENCY_TABLE_NAME: !Ref IdempotencyTable
+          ORDER_HISTORY_TABLE_NAME: !Ref OrderHistoryTable
+          EVENT_BUS_NAME: !Sub 'dev-orders-event-bus'
+          Environment: !Ref Environment
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref IdempotencyTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrderHistoryTable
         # Add Permission for this function to can send evenPublisher 
         - Statement:
             - Effect: Allow 
               Action:
                 - events:PutEvents
-              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${Environment}-ecommerce-events'
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/dev-orders-event-bus'
 
             - Effect: Allow 
               Action:
@@ -191,9 +197,17 @@ Resources:
       FunctionName: !Sub '${Environment}-update-order-status'
       CodeUri: .
       Handler: dist/handlers/http/updateOrderStatus.handler
+      Environment:
+        Variables:
+          ORDERS_TABLE_NAME: !Ref OrdersTable
+          ORDER_HISTORY_TABLE_NAME: !Ref OrderHistoryTable
+          EVENT_BUS_NAME: !Sub 'dev-orders-event-bus'
+          Environment: !Ref Environment
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrderHistoryTable
         # Add Permission for this function to can send evenPublisher 
         - Statement:
             - Effect: Allow 
@@ -214,9 +228,15 @@ Resources:
       FunctionName: !Sub '${Environment}-update-order-items'
       CodeUri: .
       Handler: dist/handlers/http/updateOrderItems.handler
+      Environment:
+        Variables:
+          ORDERS_TABLE_NAME: !Ref OrdersTable
+          ORDER_HISTORY_TABLE_NAME: !Ref OrderHistoryTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrderHistoryTable
       Events:
         UpdateItemsApi:
           Type: Api
@@ -230,14 +250,22 @@ Resources:
       FunctionName: !Sub '${Environment}-cancel-order'
       CodeUri: .
       Handler: dist/handlers/http/cancelOrder.handler
+      Environment:
+        Variables:
+          ORDERS_TABLE_NAME: !Ref OrdersTable
+          ORDER_HISTORY_TABLE_NAME: !Ref OrderHistoryTable
+          EVENT_BUS_NAME: !Sub 'dev-orders-event-bus'
+          Environment: !Ref Environment
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OrdersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrderHistoryTable
         - Statement:
             - Effect: Allow
               Action:
                 - events:PutEvents
-              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${Environment}-ecommerce-events'
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/dev-orders-event-bus'
       Events:
         CancelOrderApi:
           Type: Api

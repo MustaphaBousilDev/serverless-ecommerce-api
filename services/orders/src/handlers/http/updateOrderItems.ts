@@ -1,13 +1,13 @@
 // src/handlers/http/updateOrderItems.ts
 
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { DynamoDBOrderRepository } from '../../infrastructure/repositories/DynamoDBOrderRepository';
 import { requireAuth } from '../../shared/utils/auth';
 import { errorResponse, successResponse } from '../../shared';
 import { UpdateOrderItems } from '../../application/usecases/UpdateOrderItems';
 
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent) => {
   try {
     // Get authenticated user
     const user = requireAuth(event);

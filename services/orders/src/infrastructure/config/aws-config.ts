@@ -6,7 +6,7 @@ export const AWS_CONFIG = {
 export const TABLE_NAMES = {
     ORDERS: process.env.ORDERS_TABLE_NAME ||  `${process.env.Environment}` || 'dev-orders',
     PRODUCTS: process.env.PRODUCTS_TABLE_NAME || `${process.env.Environment}` || 'dev-products',
-    ORDER_HISTORY: process.env.ORDERS_HISTORY_TABLE_NAME || `${process.env.Environment}` || 'dev-order-history',
+    ORDER_HISTORY: process.env.ORDER_HISTORY_TABLE_NAME || `${process.env.Environment}` || 'dev-order-history',
     IDEMPOTENCY: process.env.IDEMPOTENCY_TABLE_NAME || `${process.env.Environment || 'dev'}-idempotency-keys`,
 }
 

@@ -1,6 +1,7 @@
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { Order, OrderStatus } from '../../domain/entities/Order';
 import { createLogger } from '../../shared';
+import { retry } from '../../shared/utils/retry';
 
 export interface OrderEvent {
     source: string;
@@ -57,16 +58,31 @@ export class EventPublisher {
         };
 
         try {
-            await this.eventBridgeClient.send(new PutEventsCommand({
-                Entries: [event],
-            }));
+            await retry(
+                async ()=> {
+                    this.logger.info('Publishing OrderCreated event', { orderId: data.orderId });
+                    return await this.eventBridgeClient.send(new PutEventsCommand({
+                        Entries: [event],
+                    }))
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 200,
+                    maxDelay: 2000,
+                    jitter: true,
+                },
+                this.correlationId
+            )
             this.logger.info('✅ OrderCreated event published', {
                 orderId: data.orderId,
                 eventBus: this.eventBusName,
             });
         } catch (error) {
-            console.error('❌ Failed to publish OrderCreated event:', error);
-            throw error;
+            this.logger.error('Failed to publish OrderCreated event after retries', error, {
+                orderId: data.orderId,
+            });
+            // Don't throw - event publishing shouldn't break order creation
+            //throw error;
         }
     }
 
@@ -95,18 +111,32 @@ export class EventPublisher {
         };
 
         try {
-        await this.eventBridgeClient.send(new PutEventsCommand({
-            Entries: [event],
-        }));
-        this.logger.info('OrderCancelled event published', {
-            orderId: data.orderId,
-            reason: data.reason,
-        });
+            await retry(
+                async ()=> {
+                    this.logger.info('Publishing OrderCancelled event', { orderId: data.orderId });
+                    return await this.eventBridgeClient.send(new PutEventsCommand({
+                        Entries: [event],
+                    }));
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 200,
+                    maxDelay: 2000,
+                    jitter: true,
+                },
+                this.correlationId
+            )
+            
+            this.logger.info('OrderCancelled event published', {
+                orderId: data.orderId,
+                reason: data.reason,
+            });
         } catch (error) {
-            this.logger.error('Failed to publish OrderCancelled event', error, {
+            this.logger.error('Failed to publish OrderCancelled event after retries', error, {
                 orderId: data.orderId,
             });
-            throw error;
+            // Don't throw - event publishing shouldn't break order creation
+            //throw error;
         }
     }
 
@@ -130,9 +160,21 @@ export class EventPublisher {
         };
 
         try {
-            await this.eventBridgeClient.send(new PutEventsCommand({
-                Entries: [event],
-            }));
+            await retry(
+                async () => {
+                   this.logger.info('Publishing OrderStatusChanged event', { orderId: data.orderId });
+                    return await this.eventBridgeClient.send(new PutEventsCommand({
+                        Entries: [event],
+                    }));
+                },
+                {
+                    maxAttempts: 3,
+                    baseDelay: 200,
+                    maxDelay: 2000,
+                    jitter: true,
+                },
+                this.correlationId
+            );
             this.logger.info('OrderStatusChanged event published', {
                 orderId: data.orderId,
                 oldStatus: data.oldStatus,
@@ -142,7 +184,8 @@ export class EventPublisher {
             this.logger.error('Failed to publish OrderStatusChanged event', error, {
                 orderId: data.orderId,
             });
-            throw error;
+            // Don't throw - event publishing shouldn't break order creation
+            //throw error;
         }
     }
 

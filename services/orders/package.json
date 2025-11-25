@@ -32,7 +32,7 @@
     "logs:get": "aws logs tail /aws/lambda/dev-get-order --follow",
     "logs:list": "aws logs tail /aws/lambda/dev-list-orders --follow",
     "logs:all": "aws logs tail /aws/lambda/dev-create-order /aws/lambda/dev-get-order /aws/lambda/dev-list-orders --follow",
-    "logs:recent": "aws logs tail /aws/lambda/dev-create-order --since 10m",
+    "logs:recent": "aws logs tail /aws/lambda/dev-create-order --since 1m",
     "logs:errors": "aws logs filter-pattern /aws/lambda/dev-create-order --filter-pattern ERROR --since 1h",
     "// === AWS INFO ===": "",
     "info": "aws cloudformation describe-stacks --stack-name orders-service-stack --query 'Stacks[0].Outputs' --output table",
