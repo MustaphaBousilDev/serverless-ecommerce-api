@@ -2,6 +2,7 @@ import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge
 import { Order, OrderStatus } from '../../domain/entities/Order';
 import { createLogger } from '../../shared';
 import { retry } from '../../shared/utils/retry';
+import { CircuitBreakerManager } from '../../shared/utils/circuitBreaker';
 
 export interface OrderEvent {
     source: string;
@@ -14,6 +15,7 @@ export class EventPublisher {
     private eventBusName: string
     private correlationId: string;
     private logger: any;
+    private circuitBreaker: any;
 
     constructor(correlationId?: string){
         this.eventBridgeClient = new EventBridgeClient({
@@ -26,6 +28,12 @@ export class EventPublisher {
         });
         this.correlationId = correlationId || 'no-correlation-id';
         this.logger = createLogger(this.correlationId);
+        this.circuitBreaker = CircuitBreakerManager.getBreaker('eventBridge', {
+            failureThreshold: 3,
+            successThreshold: 2,
+            timeout: 3000,
+            monitoringPeriod: 60000
+        })
     }
 
     async publishOrderCreated(data: {
@@ -58,20 +66,24 @@ export class EventPublisher {
         };
 
         try {
-            await retry(
-                async ()=> {
-                    this.logger.info('Publishing OrderCreated event', { orderId: data.orderId });
-                    return await this.eventBridgeClient.send(new PutEventsCommand({
-                        Entries: [event],
-                    }))
-                },
-                {
-                    maxAttempts: 3,
-                    baseDelay: 200,
-                    maxDelay: 2000,
-                    jitter: true,
-                },
-                this.correlationId
+            await this.circuitBreaker.execute(
+                async () => {
+                    await retry(
+                        async ()=> {
+                            this.logger.info('Publishing OrderCreated event', { orderId: data.orderId });
+                            return await this.eventBridgeClient.send(new PutEventsCommand({
+                                Entries: [event],
+                            }))
+                        },
+                        {
+                            maxAttempts: 3,
+                            baseDelay: 200,
+                            maxDelay: 2000,
+                            jitter: true,
+                        },
+                        this.correlationId
+                    )
+                }
             )
             this.logger.info('✅ OrderCreated event published', {
                 orderId: data.orderId,
@@ -111,20 +123,24 @@ export class EventPublisher {
         };
 
         try {
-            await retry(
-                async ()=> {
-                    this.logger.info('Publishing OrderCancelled event', { orderId: data.orderId });
-                    return await this.eventBridgeClient.send(new PutEventsCommand({
-                        Entries: [event],
-                    }));
-                },
-                {
-                    maxAttempts: 3,
-                    baseDelay: 200,
-                    maxDelay: 2000,
-                    jitter: true,
-                },
-                this.correlationId
+            await this.circuitBreaker.execute(
+                async () => {
+                    await retry(
+                        async ()=> {
+                            this.logger.info('Publishing OrderCancelled event', { orderId: data.orderId });
+                            return await this.eventBridgeClient.send(new PutEventsCommand({
+                                Entries: [event],
+                            }));
+                        },
+                        {
+                            maxAttempts: 3,
+                            baseDelay: 200,
+                            maxDelay: 2000,
+                            jitter: true,
+                        },
+                        this.correlationId
+                    )
+                }
             )
             
             this.logger.info('OrderCancelled event published', {
@@ -160,21 +176,25 @@ export class EventPublisher {
         };
 
         try {
-            await retry(
+            await this.circuitBreaker.execute(
                 async () => {
-                   this.logger.info('Publishing OrderStatusChanged event', { orderId: data.orderId });
-                    return await this.eventBridgeClient.send(new PutEventsCommand({
-                        Entries: [event],
-                    }));
-                },
-                {
-                    maxAttempts: 3,
-                    baseDelay: 200,
-                    maxDelay: 2000,
-                    jitter: true,
-                },
-                this.correlationId
-            );
+                    await retry(
+                        async () => {
+                        this.logger.info('Publishing OrderStatusChanged event', { orderId: data.orderId });
+                            return await this.eventBridgeClient.send(new PutEventsCommand({
+                                Entries: [event],
+                            }));
+                        },
+                        {
+                            maxAttempts: 3,
+                            baseDelay: 200,
+                            maxDelay: 2000,
+                            jitter: true,
+                        },
+                        this.correlationId
+                    );
+                }
+            )
             this.logger.info('OrderStatusChanged event published', {
                 orderId: data.orderId,
                 oldStatus: data.oldStatus,
