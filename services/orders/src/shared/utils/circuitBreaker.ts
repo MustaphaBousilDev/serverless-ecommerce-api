@@ -68,19 +68,19 @@ export class CircuitBreaker {
     ): Promise<T> {
         // Check if circuit is open
         if (this.state.state === CircuitState.OPEN) {
-        if (this.shouldAttemptReset()) {
-            this.logger.info('Circuit transitioning to HALF_OPEN', {
-            name: this.options.name,
-            previousState: CircuitState.OPEN,
-            });
-            this.state.state = CircuitState.HALF_OPEN;
-        } else {
-            this.logger.warn('Circuit is OPEN, using fallback', {
+            if (this.shouldAttemptReset()) {
+                this.logger.info('Circuit transitioning to HALF_OPEN', {
                 name: this.options.name,
-                nextAttemptTime: this.state.nextAttemptTime,
-            });
-            return this.executeFallback(fallback);
-        }
+                previousState: CircuitState.OPEN,
+                });
+                this.state.state = CircuitState.HALF_OPEN;
+            } else {
+                this.logger.warn('Circuit is OPEN, using fallback', {
+                    name: this.options.name,
+                    nextAttemptTime: this.state.nextAttemptTime,
+                });
+                return this.executeFallback(fallback);
+            }
         }
 
         try {
@@ -89,7 +89,7 @@ export class CircuitBreaker {
             return result;
         } catch (error) {
             this.onFailure();
-            
+            // @ts-ignore
             if (this.state.state === CircuitState.OPEN) {
                 this.logger.warn('Circuit opened, using fallback', {
                     name: this.options.name,
@@ -155,6 +155,18 @@ export class CircuitBreaker {
             this.state.failureCount = 1;
         }
 
+        // If in HALF_OPEN and fails, go back to OPEN
+        if (this.state.state === CircuitState.HALF_OPEN) {
+            this.logger.warn('Circuit reopening after failure in HALF_OPEN', {
+                name: this.options.name,
+            });
+            
+            this.state.state = CircuitState.OPEN;
+            this.state.nextAttemptTime = Date.now() + this.options.timeout;
+            this.state.successCount = 0;
+            return;
+        }
+
         // Open circuit if threshold exceeded
         if (this.state.failureCount >= this.options.failureThreshold) {
             this.logger.error('Circuit opening due to failures', {
@@ -168,16 +180,7 @@ export class CircuitBreaker {
             this.state.successCount = 0;
         }
 
-        // If in HALF_OPEN and fails, go back to OPEN
-        if (this.state.state === CircuitState.HALF_OPEN) {
-            this.logger.warn('Circuit reopening after failure in HALF_OPEN', {
-                name: this.options.name,
-            });
-            
-            this.state.state = CircuitState.OPEN;
-            this.state.nextAttemptTime = Date.now() + this.options.timeout;
-            this.state.successCount = 0;
-        }
+        
   }
 
 

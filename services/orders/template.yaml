@@ -273,6 +273,19 @@ Resources:
             RestApiId: !Ref OrdersApi
             Path: /orders/{orderId}/cancel
             Method: POST
+  HealthCheckFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      FunctionName: !Sub '${Environment}-health-check'
+      CodeUri: .
+      Handler: dist/handlers/http/healthCheck.handler
+      Events:
+        HealthCheckApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref OrdersApi
+            Path: /health
+            Method: GET
 
   DeleteOrderFunction:
     Type: AWS::Serverless::Function
