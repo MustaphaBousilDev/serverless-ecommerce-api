@@ -376,6 +376,16 @@ Resources:
       FunctionName: !Sub '${Environment}-health-check'
       CodeUri: .
       Handler: dist/handlers/http/healthCheck.handler
+      Environment:
+        Variables:
+          ORDERS_TABLE_NAME: !Ref OrdersTable 
+          Environment: !Ref Environment 
+      Policies: 
+        - Statement:
+          - Effect: Allow 
+            Action:
+              - dynamodb:DescribeTable
+            Resource: !GetAtt OrdersTable.Arn
       Events:
         HealthCheckApi:
           Type: Api
@@ -383,6 +393,8 @@ Resources:
             RestApiId: !Ref OrdersApi
             Path: /health
             Method: GET
+            Auth:
+              Authorizer: NONE 
 
   DeleteOrderFunction:
     Type: AWS::Serverless::Function

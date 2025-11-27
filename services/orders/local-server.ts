@@ -3,9 +3,10 @@ import express from 'express';
 import { handler as createOrderHandler } from './src/handlers/http/createOrder';
 import { handler as getOrderHandler } from './src/handlers/http/getOrder';
 import { handler as listOrdersHandler } from './src/handlers/http/listOrders';
+import { handler as healthCheckHandler } from './src/handlers/http/healthCheck';
 import { handler as updateOrderStatusHandler } from './src/handlers/http/updateOrderStatus';
 import { handler as deleteOrderHandler } from './src/handlers/http/deleteOrder';
-
+import { Context, Callback } from 'aws-lambda';
 const app = express();
 app.use(express.json());
 
@@ -31,7 +32,25 @@ function createMockEvent(req: express.Request, method: string): any {
     } as any
   } as any;
 }
-
+function createMockContext(): Context {
+  return {
+    callbackWaitsForEmptyEventLoop: false,
+    functionName: 'local-function',
+    functionVersion: '$LATEST',
+    invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:local-function',
+    memoryLimitInMB: '512',
+    awsRequestId: `local-${Date.now()}`,
+    logGroupName: '/aws/lambda/local',
+    logStreamName: 'local',
+    getRemainingTimeInMillis: () => 30000,
+    done: () => {},
+    fail: () => {},
+    succeed: () => {},
+  } as Context;
+}
+const mockCallback: Callback = (error, result) => {
+  if (error) throw error;
+};
 // Routes
 app.post('/orders', async (req, res) => {
   try {
@@ -40,6 +59,22 @@ app.post('/orders', async (req, res) => {
     res.status(result.statusCode)
        .set(result.headers || {})
        .send(result.body);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    const mockEvent = createMockEvent(req, 'GET');
+    const mockContext = createMockContext();
+    const result = await healthCheckHandler(mockEvent, mockContext, mockCallback);
+    
+    if (result) {
+      res.status(result.statusCode)
+         .set(result.headers || {})
+         .send(result.body);
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
