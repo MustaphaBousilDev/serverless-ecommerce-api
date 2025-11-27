@@ -3,6 +3,7 @@ import { Order, OrderStatus } from '../../domain/entities/Order';
 import { createLogger } from '../../shared';
 import { retry } from '../../shared/utils/retry';
 import { CircuitBreakerManager } from '../../shared/utils/circuitBreaker';
+import { TimeoutError, withTimeout } from '../../shared/utils/timeout';
 
 export interface OrderEvent {
     source: string;
@@ -68,21 +69,35 @@ export class EventPublisher {
         try {
             await this.circuitBreaker.execute(
                 async () => {
-                    await retry(
-                        async ()=> {
-                            this.logger.info('Publishing OrderCreated event', { orderId: data.orderId });
-                            return await this.eventBridgeClient.send(new PutEventsCommand({
-                                Entries: [event],
-                            }))
+                    await withTimeout(
+                        async () => {
+                            await retry(
+                                async ()=> {
+                                    this.logger.info('Publishing OrderCreated event', { orderId: data.orderId });
+                                    return await this.eventBridgeClient.send(new PutEventsCommand({
+                                        Entries: [event],
+                                    }))
+                                },
+                                {
+                                    maxAttempts: 3,
+                                    baseDelay: 200,
+                                    maxDelay: 2000,
+                                    jitter: true,
+                                },
+                                this.correlationId
+                            )
                         },
-                        {
-                            maxAttempts: 3,
-                            baseDelay: 200,
-                            maxDelay: 2000,
-                            jitter: true,
-                        },
+                        5000,
+                        'publishOrderCreated',
                         this.correlationId
                     )
+                },
+                async ()=> {
+                    this.logger.warn('EventBridge unavailable, using fallback', {
+                        orderId: data.orderId,
+                        event: 'OrderCreated',
+                    })
+                    return;
                 }
             )
             this.logger.info('✅ OrderCreated event published', {
@@ -90,11 +105,15 @@ export class EventPublisher {
                 eventBus: this.eventBusName,
             });
         } catch (error) {
-            this.logger.error('Failed to publish OrderCreated event after retries', error, {
+            if (error instanceof TimeoutError) {
+                this.logger.error('Event publishing timed out', error, {
                 orderId: data.orderId,
-            });
-            // Don't throw - event publishing shouldn't break order creation
-            //throw error;
+                });
+            } else {
+                this.logger.error('Failed to publish OrderCreated event', error, {
+                orderId: data.orderId,
+                });
+            }
         }
     }
 
@@ -125,21 +144,35 @@ export class EventPublisher {
         try {
             await this.circuitBreaker.execute(
                 async () => {
-                    await retry(
-                        async ()=> {
-                            this.logger.info('Publishing OrderCancelled event', { orderId: data.orderId });
-                            return await this.eventBridgeClient.send(new PutEventsCommand({
-                                Entries: [event],
-                            }));
+                    await withTimeout(
+                        async () => {
+                            await retry(
+                                async ()=> {
+                                    this.logger.info('Publishing OrderCancelled event', { orderId: data.orderId });
+                                    return await this.eventBridgeClient.send(new PutEventsCommand({
+                                        Entries: [event],
+                                    }));
+                                },
+                                {
+                                    maxAttempts: 3,
+                                    baseDelay: 200,
+                                    maxDelay: 2000,
+                                    jitter: true,
+                                },
+                                this.correlationId
+                            )
                         },
-                        {
-                            maxAttempts: 3,
-                            baseDelay: 200,
-                            maxDelay: 2000,
-                            jitter: true,
-                        },
+                        5000,
+                        'publishOrderCancelled',
                         this.correlationId
                     )
+                },
+                async () => {
+                    this.logger.warn('EventBridge unavailable, using fallback', {
+                        orderId: data.orderId,
+                        event: 'OrderCancelled',
+                    });
+                    return;
                 }
             )
             
@@ -148,11 +181,15 @@ export class EventPublisher {
                 reason: data.reason,
             });
         } catch (error) {
-            this.logger.error('Failed to publish OrderCancelled event after retries', error, {
+            if (error instanceof TimeoutError) {
+                this.logger.error('Event publishing timed out', error, {
                 orderId: data.orderId,
-            });
-            // Don't throw - event publishing shouldn't break order creation
-            //throw error;
+                });
+            } else {
+                this.logger.error('Failed to publish OrderCancelled event', error, {
+                orderId: data.orderId,
+                });
+            }
         }
     }
 
@@ -177,22 +214,36 @@ export class EventPublisher {
 
         try {
             await this.circuitBreaker.execute(
-                async () => {
-                    await retry(
+                async ()=> {
+                    await withTimeout(
                         async () => {
-                        this.logger.info('Publishing OrderStatusChanged event', { orderId: data.orderId });
-                            return await this.eventBridgeClient.send(new PutEventsCommand({
-                                Entries: [event],
-                            }));
+                            await retry(
+                                async () => {
+                                    this.logger.info('Publishing OrderStatusChanged event', { orderId: data.orderId });
+                                    return await this.eventBridgeClient.send(new PutEventsCommand({
+                                        Entries: [event],
+                                    }));
+                                },
+                                {
+                                    maxAttempts: 3,
+                                    baseDelay: 200,
+                                    maxDelay: 2000,
+                                    jitter: true,
+                                },
+                                this.correlationId
+                            );
                         },
-                        {
-                            maxAttempts: 3,
-                            baseDelay: 200,
-                            maxDelay: 2000,
-                            jitter: true,
-                        },
+                        5000,
+                        'publishOrderStatusChanged',
                         this.correlationId
-                    );
+                    )
+                },
+                async () => {
+                    this.logger.warn('EventBridge unavailable, using fallback', {
+                        orderId: data.orderId,
+                        event: 'OrderStatusChanged',
+                    });
+                    return;
                 }
             )
             this.logger.info('OrderStatusChanged event published', {
@@ -201,11 +252,15 @@ export class EventPublisher {
                 newStatus: data.newStatus,
             });
         } catch (error) {
-            this.logger.error('Failed to publish OrderStatusChanged event', error, {
+            if (error instanceof TimeoutError) {
+                this.logger.error('Event publishing timed out', error, {
                 orderId: data.orderId,
-            });
-            // Don't throw - event publishing shouldn't break order creation
-            //throw error;
+                });
+            } else {
+                this.logger.error('Failed to publish OrderStatusChanged event', error, {
+                orderId: data.orderId,
+                });
+            }
         }
     }
 

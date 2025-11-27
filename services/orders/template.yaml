@@ -4,7 +4,7 @@ Description: Serverless E-commerce Orders Service
 
 Globals:
   Function:
-    Timeout: 30
+    Timeout: 30 # 30 seconds max for any Lambda
     Runtime: nodejs20.x
     MemorySize: 512
     Architectures:
