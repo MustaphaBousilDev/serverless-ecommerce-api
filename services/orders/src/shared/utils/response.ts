@@ -101,6 +101,9 @@ export const successResponse = (statusCode: number, data: any, correlationId?: s
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Credentials': true,
+        'X-RateLimit-Limit': '100',
+        'X-RateLimit-Remaining': '99',// Would calculate from usage
+        'X-RateLimit-Reset': new Date(Date.now() + 3600000).toISOString(),
         ...(correlationId && addCorrelationIdToHeaders(correlationId)),
     },
     body: JSON.stringify({
@@ -109,7 +112,7 @@ export const successResponse = (statusCode: number, data: any, correlationId?: s
     })
 })
 
-export const errorResponse = (statusCode: number, message: string, error?: any) => ({
+export const errorResponse = (statusCode: number, message: string, error?: any,details?: any) => ({
     statusCode, 
     headers: {
         'Content-Type': 'application/json',
@@ -119,7 +122,11 @@ export const errorResponse = (statusCode: number, message: string, error?: any) 
     body: JSON.stringify({
         success: false,
         message,
-        error: error?.message || error,
+        error: {
+          message,
+          details,
+          timestamp: new Date().toISOString(),
+        },
     })
 })
 

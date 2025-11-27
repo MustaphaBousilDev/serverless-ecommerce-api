@@ -34,11 +34,17 @@ Parameters:
       - prod
 
 Resources:
+  # API Gateway
   OrdersApi:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub '${Environment}-orders-api'
       StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
       TracingEnabled: true
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
@@ -46,6 +52,82 @@ Resources:
           CognitoAuthorizer:
             UserPoolArn:
               Fn::ImportValue: !Sub '${Environment}-UserPoolArn'
+
+      # Enable request validation
+      Models:
+        CreateOrderModel:
+          type: object
+          required:
+            - items
+            - shippingAddress
+          properties:
+            items:
+              type: array
+              minItems: 1
+              maxItems: 50
+            shippingAddress:
+              type: object
+              required:
+                - street
+                - city
+                - state
+                - country
+                - zipCode
+        UpdateStatusModel:
+          type: object
+          required:
+            - status
+          properties:
+            status:
+              type: string
+              enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+        CancelOrderModel:
+          type: object
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              minLength: 10
+              maxLength: 500
+      # Define validators
+      
+
+  # Usage Plan for Rate Limiting
+  OrdersApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: OrdersApi
+    Properties:
+      UsagePlanName: !Sub '${Environment}-orders-usage-plan'
+      Description: Usage plan for Orders API
+      ApiStages:
+        - ApiId: !Ref OrdersApi
+          Stage: !Ref Environment
+      Throttle:
+        BurstLimit: 200    # Max concurrent requests
+        RateLimit: 100     # Requests per second
+      Quota:
+        Limit: 10000       # Requests per day
+        Period: DAY
+
+  # API Key for external access
+  OrdersApiKey:
+    Type: AWS::ApiGateway::ApiKey
+
+    Properties:
+      Name: !Sub '${Environment}-orders-api-key'
+      Description: API Key for Orders API
+      Enabled: true
+
+  # Link API Key to Usage Plan
+  OrdersApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref OrdersApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref OrdersApiUsagePlan
+
+  
 
   OrdersTable:
     Type: AWS::DynamoDB::Table
@@ -74,6 +156,8 @@ Resources:
       Tags:
         - Key: Environment
           Value: !Ref Environment
+
+  
 
   OrderHistoryTable:
     Type: AWS::DynamoDB::Table 
@@ -156,6 +240,11 @@ Resources:
             RestApiId: !Ref OrdersApi
             Path: /orders
             Method: POST
+            RequestModel:
+              Model: CreateOrderModel
+              Required: true
+              ValidateBody: true
+            
 
   GetOrderFunction:
     Type: AWS::Serverless::Function
@@ -221,6 +310,10 @@ Resources:
             RestApiId: !Ref OrdersApi
             Path: /orders/{orderId}/status
             Method: PUT
+            RequestModel:
+              Model: UpdateStatusModel
+              Required: true
+              ValidateBody: true
 
   UpdateOrderItemsFunction:
     Type: AWS::Serverless::Function
@@ -273,6 +366,10 @@ Resources:
             RestApiId: !Ref OrdersApi
             Path: /orders/{orderId}/cancel
             Method: POST
+            RequestModel:
+              Model: CancelOrderModel
+              Required: true
+              ValidateBody: true
   HealthCheckFunction:
     Type: AWS::Serverless::Function 
     Properties:
@@ -367,6 +464,25 @@ Resources:
       RetentionInDays: 7
 
 Outputs:
+  OrdersApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${OrdersApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${Environment}-OrdersApiUrl'
+
+  OrdersApiKey:
+    Description: API Key for external access
+    Value: !Ref OrdersApiKey
+    Export:
+      Name: !Sub '${Environment}-OrdersApiKey'
+
+  UsagePlanId:
+    Description: Usage Plan ID
+    Value: !Ref OrdersApiUsagePlan
+    Export:
+      Name: !Sub '${Environment}-OrdersUsagePlanId'
+
+  
   ApiEndpoint:
     Description: API Gateway endpoint URL
     Value: !Sub 'https://${OrdersApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
