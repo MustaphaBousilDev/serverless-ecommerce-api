@@ -1,0 +1,25 @@
+{
+  "name": "inventory-service",
+  "version": "1.0.0",
+  "description": "Inventory microservice for e-commerce platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "npm run build && sam deploy --config-file samconfig.toml",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "logs": "sam logs -n dev-reserve-inventory --tail"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.515.0",
+    "@aws-sdk/client-eventbridge": "^3.515.0",
+    "@aws-sdk/lib-dynamodb": "^3.515.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.131",
+    "@types/node": "^20.11.5",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.3"
+  }
+}
