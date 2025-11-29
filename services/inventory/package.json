@@ -6,11 +6,12 @@
   "scripts": {
     "build": "tsc",
     "deploy": "npm run build && sam deploy --config-file samconfig.toml",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "logs": "sam logs -n dev-reserve-inventory --tail"
+    "seed": "ts-node seed-inventory.ts",
+    "logs:order-created": "sam logs -n dev-inventory-order-created --tail",
+    "logs:payment-failed": "sam logs -n dev-inventory-payment-failed --tail"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.940.0",
     "@aws-sdk/client-dynamodb": "^3.515.0",
     "@aws-sdk/client-eventbridge": "^3.515.0",
     "@aws-sdk/lib-dynamodb": "^3.515.0",

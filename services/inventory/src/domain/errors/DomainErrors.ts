@@ -1,5 +1,5 @@
-import { AppError, ErrorDetails } from '../../../../orders/src/domain/errors/AppError';
-import { ErrorCode } from '../../../../orders/src/domain/errors/ErrorCodes';
+import { AppError, ErrorDetails } from "./AppError";
+import { ErrorCode } from "./ErrorCodes";
 
 export class OrderNotFoundError extends AppError {
   constructor(orderId: string, additionalDetails?: ErrorDetails) {

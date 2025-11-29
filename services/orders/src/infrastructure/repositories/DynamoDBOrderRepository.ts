@@ -7,7 +7,7 @@ import { OrderId } from '../../domain/value-objects/OrderId';
 import { ListOrdersFilters } from '../../application/usecases/ListOrdersUseCase';
 import { createLogger } from '../../shared/utils/logger';
 import { retry } from '../../shared/utils/retry';
-import { DatabaseError } from '../../domain/errors/DomainErrors';
+import { DatabaseError } from '../../../../inventory/src/domain/errors/DomainErrors';
 export class DynamoDBOrderRepository implements IOrderRepository {
     private tableName: string;
 

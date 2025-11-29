@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Inventory Service
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs20.x
+    MemorySize: 512
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        INVENTORY_TABLE_NAME: !Ref InventoryTable
+        RESERVATIONS_TABLE_NAME: !Ref ReservationsTable
+        EVENT_BUS_NAME: dev-orders-event-bus
+        Environment: !Ref Environment
+        # AWS_REGION: !Ref AWS::Region  ← REMOVE THIS LINE
+
+Resources:
+  # DynamoDB Tables
+  InventoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-inventory'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  ReservationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-reservations'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: reservationId
+          AttributeType: S
+        - AttributeName: orderId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: reservationId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: OrderIdIndex
+          KeySchema:
+            - AttributeName: orderId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Event Handlers
+  OrderCreatedHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-inventory-order-created'
+      CodeUri: .
+      Handler: dist/handlers/events/orderCreatedHandler.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InventoryTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReservationsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/dev-orders-event-bus'
+      Events:
+        OrderCreatedEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: dev-orders-event-bus
+            Pattern:
+              source:
+                - orders.service
+              detail-type:
+                - OrderCreated
+
+  PaymentFailedHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-inventory-payment-failed'
+      CodeUri: .
+      Handler: dist/handlers/events/paymentFailedHandler.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InventoryTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReservationsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/dev-orders-event-bus'
+      Events:
+        PaymentFailedEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: dev-orders-event-bus
+            Pattern:
+              source:
+                - payment.service
+              detail-type:
+                - PaymentFailed
+
+  # Dead Letter Queue
+  InventoryDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-inventory-dlq'
+      MessageRetentionPeriod: 1209600
+
+Outputs:
+  InventoryTableName:
+    Description: Inventory DynamoDB table name
+    Value: !Ref InventoryTable
+    Export:
+      Name: !Sub '${Environment}-InventoryTableName'
+
+  ReservationsTableName:
+    Description: Reservations DynamoDB table name
+    Value: !Ref ReservationsTable
+    Export:
+      Name: !Sub '${Environment}-ReservationsTableName'

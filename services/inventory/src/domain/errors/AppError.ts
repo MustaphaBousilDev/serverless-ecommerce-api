@@ -1,4 +1,4 @@
-import { ErrorCode, getHttpStatusForErrorCode } from '../../../../orders/src/domain/errors/ErrorCodes';
+import { ErrorCode, getHttpStatusForErrorCode} from './ErrorCodes'
 
 export interface ErrorDetails {
   [key: string]: any;

@@ -19,6 +19,6 @@
     "sourceMap": false,             // ← Don't need source maps in production
     "removeComments": true          // ← Smaller bundle size
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../inventory/src/domain/errors/AppError.ts", "../inventory/src/domain/errors/DomainErrors.ts", "../inventory/src/domain/errors/ErrorCodes.ts"],
   "exclude": ["node_modules", "dist", ".aws-sam", "tests", "**/*.test.ts"]
 }

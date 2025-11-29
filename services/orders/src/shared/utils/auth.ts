@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { UnauthorizedError } from '../../domain/errors/DomainErrors';
+import { UnauthorizedError } from '../../../../inventory/src/domain/errors/DomainErrors';
 
 export interface AuthenticatedUser {
   email: string;

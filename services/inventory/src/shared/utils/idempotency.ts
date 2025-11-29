@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { IdempotencyService } from '../../infrastructure/services/IdempotencyService';
+
 import { v4 as uuidv4 } from 'uuid';
+import { IdempotencyService } from '../../infrastructure/services/IdempotencyService';
 
 export interface IdempotencyResult {
   isIdempotent: boolean;

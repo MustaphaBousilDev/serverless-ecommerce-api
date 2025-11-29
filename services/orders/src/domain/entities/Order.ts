@@ -8,7 +8,7 @@ import {
   CannotUpdateItemsError,
   ItemNotFoundInOrderError,
   CannotRemoveLastItemError
-} from '../errors/DomainErrors'
+} from '../../../../inventory/src/domain/errors/DomainErrors'
 
 export enum OrderStatus {
   PENDING = 'PENDING',

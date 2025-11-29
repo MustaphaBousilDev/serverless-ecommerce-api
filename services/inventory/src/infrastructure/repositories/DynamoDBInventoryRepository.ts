@@ -106,9 +106,9 @@ export class DynamoDBInventoryRepository implements IInventoryRepository {
     const command = new PutCommand({
       TableName: this.reservationsTableName,
       Item: {
+        ...reservation.toObject(),
         reservationId: reservation.reservationId,
         orderId: reservation.orderId,
-        ...reservation.toObject(),
       },
     });
 

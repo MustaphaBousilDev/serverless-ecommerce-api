@@ -4,7 +4,7 @@ import { Order } from '../../domain/entities/Order';
 import { OrderId } from '../../domain/value-objects/OrderId';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { errorResponse } from '../../shared';
-import { ForbiddenError } from '../../domain/errors/DomainErrors';
+import { ForbiddenError } from '../../../../inventory/src/domain/errors/DomainErrors';
 
 export interface GetOrderInput {
   orderId: string;

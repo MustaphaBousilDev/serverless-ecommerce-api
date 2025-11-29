@@ -1,5 +1,5 @@
-import { ErrorCode } from '../../domain/errors/ErrorCodes'
-import { AppError } from '../../domain/errors/AppError'
+import { ErrorCode } from '../../../../inventory/src/domain/errors/ErrorCodes'
+import { AppError } from '../../../../inventory/src/domain/errors/AppError'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import {createLogger } from './logger'
 import { addCorrelationIdToHeaders, getCorrelationId } from './correlationId';

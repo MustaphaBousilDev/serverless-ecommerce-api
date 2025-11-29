@@ -5,7 +5,7 @@ import {
   OrderMaximumExceededError,
   TooManyItemsError,
   ValidationError
-} from '../../domain/errors/DomainErrors';
+} from '../../../../inventory/src/domain/errors/DomainErrors';
 import { MetricsPublisher } from '../../shared/utils/metrics';
 export interface ValidationResult {
   isValid: boolean;
