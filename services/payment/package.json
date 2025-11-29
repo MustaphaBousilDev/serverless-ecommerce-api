@@ -1,0 +1,23 @@
+{
+  "name": "payment-service",
+  "version": "1.0.0",
+  "description": "Payment microservice",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "npm run build && sam deploy --config-file samconfig.toml",
+    "logs": "sam logs -n dev-payment-charge --tail"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.940.0",
+    "@aws-sdk/client-dynamodb": "^3.515.0",
+    "@aws-sdk/client-eventbridge": "^3.515.0",
+    "@aws-sdk/lib-dynamodb": "^3.515.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.131",
+    "@types/node": "^20.11.5",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.3"
+  }
+}

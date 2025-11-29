@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Payment Service
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs20.x
+    MemorySize: 512
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        PAYMENTS_TABLE_NAME: !Ref PaymentsTable
+        EVENT_BUS_NAME: dev-orders-event-bus
+        Environment: !Ref Environment
+
+Resources:
+  # DynamoDB Table
+  PaymentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-payments'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: paymentId
+          AttributeType: S
+        - AttributeName: orderId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: paymentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: OrderIdIndex
+          KeySchema:
+            - AttributeName: orderId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Event Handler
+  InventoryReservedHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-payment-inventory-reserved'
+      CodeUri: .
+      Handler: dist/handlers/events/inventoryReservedHandler.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/dev-orders-event-bus'
+      Events:
+        InventoryReservedEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: dev-orders-event-bus
+            Pattern:
+              source:
+                - inventory.service
+              detail-type:
+                - InventoryReserved
+
+  # Dead Letter Queue
+  PaymentDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${Environment}-payment-dlq'
+      MessageRetentionPeriod: 1209600
+
+Outputs:
+  PaymentsTableName:
+    Description: Payments DynamoDB table name
+    Value: !Ref PaymentsTable
+    Export:
+      Name: !Sub '${Environment}-PaymentsTableName'
