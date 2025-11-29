@@ -13,6 +13,8 @@ import { withErrorHandling } from '../../shared/utils/errorHandler';
 import { getCorrelationId } from '../../shared/utils/correlationId';
 
 import { MetricsPublisher, MetricName } from '../../shared/utils/metrics';
+import { SagaStateRepository } from '../../infrastructure/repositories/SagaStateRepository';
+import { EventPublisher } from '../../infrastructure/events/EventPublisher';
 
 
 
@@ -59,7 +61,9 @@ export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGate
     }
 
     const orderRepository = new DynamoDBOrderRepository();
-    const createOrderUseCase = new CreateOrderUseCase(orderRepository,correlationId);
+    const sagaRepository = new SagaStateRepository(correlationId);
+     const eventPublisher = new EventPublisher(correlationId);
+    const createOrderUseCase = new CreateOrderUseCase(orderRepository,eventPublisher,sagaRepository);
 
     logger.info('Creating order', { userId: user.email, itemCount: requestBody.items.length });
     
@@ -67,7 +71,7 @@ export const handlerLogic = async (event: APIGatewayProxyEvent): Promise<APIGate
       userId: user.email,
       items: requestBody.items,
       shippingAddress: requestBody.shippingAddress,
-    });
+    }, correlationId);
 
     await metrics.publishOrderCreated(
       result.totalAmount,

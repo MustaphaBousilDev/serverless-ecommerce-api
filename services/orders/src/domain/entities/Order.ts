@@ -214,7 +214,7 @@ export class Order {
     this.props.updatedAt = new Date();  
   }
   // Convert to event data format
-  toEventData(): {
+  toEventData(sagaId: string, sagaStep: number): {
   orderId: string;
   userId: string;
   totalAmount: number;
@@ -231,6 +231,9 @@ export class Order {
     country: string;
     zipCode: string;
   };
+  sagaId: string;
+  sagaStep: number;
+
 } {
   return {
     orderId: this.props.orderId.value,
@@ -249,6 +252,8 @@ export class Order {
       country: this.props.shippingAddress.country,
       zipCode: this.props.shippingAddress.zipCode,
     },
+    sagaId: sagaId,
+    sagaStep: sagaStep
   };
 }
 

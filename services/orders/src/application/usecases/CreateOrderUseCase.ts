@@ -6,8 +6,11 @@ import { Address } from '../../domain/value-objects/Address';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { EventPublisher } from '../../infrastructure/events/EventPublisher'
 import { DynamoDBOrderHistoryRepository } from '../../infrastructure/repositories/DynamoDBOrderHistoryRepository';
+import { v4 as uuidv4 } from 'uuid';
 import { OrderHistory } from '../../domain/value-objects/OrderHistory';
 import { OrderValidator } from '../../interfaces/validators/OrderValidator';
+import { SagaStateRepository, SagaStatus } from '../../infrastructure/repositories/SagaStateRepository';
+import { SagaEventType } from '../../domain/events/SagaEvents';
 
 export interface CreateOrderInput {
   userId: string;
@@ -31,6 +34,7 @@ export interface CreateOrderOutput {
   orderId: string;
   userId: string;
   status: string;
+  correlationId: string;
   totalAmount: number;
   createdAt: string;
 }
@@ -38,11 +42,12 @@ export interface CreateOrderOutput {
 export class CreateOrderUseCase {
   constructor(
     private orderRepository: IOrderRepository,
-    private correlationId: string,
-    private eventPublisher: EventPublisher  = new EventPublisher(correlationId)
+
+    private eventPublisher: EventPublisher ,
+    private sagaRepository: SagaStateRepository
   ) {}
 
-  async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
+  async execute(input: CreateOrderInput,correlationId: string): Promise<CreateOrderOutput> {
     console.log("##============== INPUT", input)
   
     this.validateInput(input);
@@ -62,9 +67,36 @@ export class CreateOrderUseCase {
 
     //Create order entity (business logic happens here)
     const order = Order.create(input.userId, orderItems, shippingAddress);
+    const sagaId = uuidv4();
+    await this.sagaRepository.createSaga({
+      sagaId,
+      orderId: order.orderId.value,
+      status: SagaStatus.STARTED,
+      currentStep: 1,
+      totalSteps: 4, // Order creation → Email → (Future: Inventory → Payment)
+      startedAt: new Date().toISOString(),
+      events: [],
+      componsationEvents: [],
+    })
 
 
     await this.orderRepository.save(order);
+    await this.sagaRepository.addSagaEvent(sagaId, order.orderId.value, {
+      eventType: SagaEventType.ORDER_CREATED,
+      stepNumber: 1,
+      isCompensation: false,
+      data: {
+        orderId: order.orderId.value,
+        userId: input.userId,
+        totalAmount: order.totalAmount,
+      },
+    });
+    await this.sagaRepository.updateSagaStatus(
+      sagaId,
+      order.orderId.value,
+      SagaStatus.IN_PROGRESS,
+      2
+    );
 
     const orderHistoryRepo = new DynamoDBOrderHistoryRepository()
     const historyEntry = OrderHistory.create(
@@ -76,7 +108,7 @@ export class CreateOrderUseCase {
     await orderHistoryRepo.save(historyEntry);
 
     try {
-      await this.eventPublisher.publishOrderCreated(order.toEventData());
+      await this.eventPublisher.publishOrderCreated(order.toEventData(sagaId,2/* Sate Steps */));
     } catch(error) {
       console.error('⚠️ Failed to publish OrderCreated event, but order was created:', error)
     }
@@ -87,6 +119,7 @@ export class CreateOrderUseCase {
       status: order.status,
       totalAmount: order.totalAmount,
       createdAt: order.createdAt.toISOString(),
+      correlationId: correlationId
     };
   }
 

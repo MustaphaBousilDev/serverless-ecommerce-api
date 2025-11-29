@@ -133,7 +133,7 @@ export class SagaStateRepository {
     async addSagaEvent(
         sagaId: string,
         orderId: string,
-            event: {
+        event: {
             eventType: SagaEventType;
             stepNumber: number;
             isCompensation: boolean;
